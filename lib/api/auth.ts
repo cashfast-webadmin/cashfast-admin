@@ -1,5 +1,6 @@
 "use client"
 
+import { decodeAccessTokenPayload } from "@/lib/auth/jwt-claims"
 import type { AuthUser, SignInCredentials } from "@/lib/auth/types"
 import { createClient } from "@/lib/supabase/client"
 
@@ -42,11 +43,20 @@ async function getUser(): Promise<AuthUser | null> {
     throw error
   }
   if (!user) return null
+
+  // Prefer app_metadata from the JWT (set by custom access token hook).
+  // The API user object may not include hook claims; decoding the token is reliable.
+  const { data: session } = await supabase.auth.getSession()
+  const payload = decodeAccessTokenPayload(session?.session?.access_token)
+  const appMeta = payload?.app_metadata ?? (user.app_metadata as { roles?: string[]; organization_id?: string } | undefined)
+
   return {
     id: user.id,
     email: user.email ?? undefined,
     displayName:
       user.user_metadata?.name ?? user.user_metadata?.full_name ?? null,
+    roles: appMeta?.roles?.length ? appMeta.roles : undefined,
+    organizationId: appMeta?.organization_id ?? undefined,
   }
 }
 

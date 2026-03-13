@@ -93,6 +93,7 @@ A **custom access token hook** adds `app_metadata.roles` (array of role names) a
 
 - **Local:** The hook is enabled in `config.toml` under `[auth.hook.custom_access_token]`.
 - **Hosted:** After pushing migrations, enable the hook in the Dashboard: **Authentication → Hooks → Customize access token** → enable and set URI to `pg-functions://postgres/public/custom_access_token_hook`. Users must sign in again (or refresh the session) to get a token with the new claims.
+- **Verify in the frontend:** After signing in, open the dashboard and check the browser console for `[Auth] Resolved claims` with `roles` and `organizationId`. The app reads these from the **decoded access token** (the hook writes into the JWT; the Auth API user object may not include them). If you still see `undefined`: (1) confirm the hook is enabled in Dashboard → Authentication → Hooks, (2) confirm the function exists (SQL: `select proname from pg_proc where proname = 'custom_access_token_hook'`), (3) ensure your user has at least one row in `authz.user_roles` (e.g. assign the `super_admin` role).
 
 ## Adding permissions / policies
 

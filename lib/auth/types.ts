@@ -7,6 +7,9 @@ export interface AuthUser {
   email: string | undefined
   /** Optional display name from provider */
   displayName?: string | null
+  /** From JWT app_metadata (custom access token hook) */
+  roles?: string[]
+  organizationId?: string | null
 }
 
 export interface AuthError {

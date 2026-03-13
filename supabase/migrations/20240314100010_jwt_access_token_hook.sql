@@ -16,11 +16,17 @@ declare
   first_org_id uuid;
   uid uuid;
 begin
+  if event->'claims' is null then
+    return event;
+  end if;
   uid := (event->>'user_id')::uuid;
   claims := event->'claims';
 
-  -- Ensure app_metadata exists
+  -- Preserve existing app_metadata, then add roles and organization_id
   app_meta := coalesce(claims->'app_metadata', '{}'::jsonb);
+  if jsonb_typeof(app_meta) <> 'object' then
+    app_meta := '{}'::jsonb;
+  end if;
 
   -- Roles: array of role names from authz.user_roles + authz.roles
   select coalesce(jsonb_agg(r.name order by r.name), '[]'::jsonb)

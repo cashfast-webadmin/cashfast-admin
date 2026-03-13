@@ -7,6 +7,7 @@ import {
   MessageSquareDot,
 } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -43,6 +44,15 @@ export function NavUser() {
 
   const displayName = user?.displayName ?? user?.email ?? "User"
   const email = user?.email ?? ""
+
+  useEffect(() => {
+    if (user) {
+      console.log("[Auth] Resolved claims (from JWT or API):", {
+        roles: user.roles,
+        organizationId: user.organizationId,
+      })
+    }
+  }, [user])
 
   return (
     <SidebarMenu>
