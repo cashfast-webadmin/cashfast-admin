@@ -3,11 +3,11 @@ import packageJson from "../package.json"
 const currentYear = new Date().getFullYear()
 
 export const APP_CONFIG = {
-  name: "Homy Admin",
+  name: "Cashfast",
   version: packageJson.version,
-  copyright: `© ${currentYear}, Homy Admin.`,
+  copyright: `© ${currentYear}, Cashfast Admin.`,
   meta: {
-    title: "Homy Admin",
-    description: "Homy Admin",
+    title: "Cashfast Admin",
+    description: "Cashfast Admin",
   },
 }

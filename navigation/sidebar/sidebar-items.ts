@@ -1,35 +1,28 @@
-import {
-  ChartBar,
-  Fingerprint,
-  LayoutDashboard,
-  type LucideIcon,
-  SquareArrowUpRight,
-  Users,
-} from "lucide-react";
+import { LayoutDashboard, type LucideIcon, Users } from "lucide-react"
 
 export interface NavSubItem {
-  title: string;
-  url: string;
-  icon?: LucideIcon;
-  comingSoon?: boolean;
-  newTab?: boolean;
-  isNew?: boolean;
+  title: string
+  url: string
+  icon?: LucideIcon
+  comingSoon?: boolean
+  newTab?: boolean
+  isNew?: boolean
 }
 
 export interface NavMainItem {
-  title: string;
-  url: string;
-  icon?: LucideIcon;
-  subItems?: NavSubItem[];
-  comingSoon?: boolean;
-  newTab?: boolean;
-  isNew?: boolean;
+  title: string
+  url: string
+  icon?: LucideIcon
+  subItems?: NavSubItem[]
+  comingSoon?: boolean
+  newTab?: boolean
+  isNew?: boolean
 }
 
 export interface NavGroup {
-  id: number;
-  label?: string;
-  items: NavMainItem[];
+  id: number
+  label?: string
+  items: NavMainItem[]
 }
 
 export const sidebarItems: NavGroup[] = [
@@ -38,14 +31,9 @@ export const sidebarItems: NavGroup[] = [
     label: "Dashboards",
     items: [
       {
-        title: "Default",
-        url: "/dashboard/default",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "CRM",
+        title: "Home",
         url: "/dashboard/crm",
-        icon: ChartBar,
+        icon: LayoutDashboard,
       },
     ],
   },
@@ -59,27 +47,6 @@ export const sidebarItems: NavGroup[] = [
         icon: Users,
         comingSoon: true,
       },
-      {
-        title: "Authentication",
-        url: "/auth",
-        icon: Fingerprint,
-        subItems: [
-          { title: "Login v1", url: "/auth/v1/login", newTab: true },
-          { title: "Login v2", url: "/auth/v2/login", newTab: true },
-        ],
-      },
     ],
   },
-  {
-    id: 3,
-    label: "Misc",
-    items: [
-      {
-        title: "Others",
-        url: "/dashboard/coming-soon",
-        icon: SquareArrowUpRight,
-        comingSoon: true,
-      },
-    ],
-  },
-];
+]
