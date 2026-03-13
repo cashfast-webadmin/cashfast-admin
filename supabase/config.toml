@@ -28,6 +28,11 @@ additional_redirect_urls = ["http://localhost:3000/*"]
 jwt_expiry = 3600
 enable_signup = true
 
+# Add roles and organization_id to JWT for fewer DB lookups in RLS
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
+
 [auth.email]
 enable_signup = true
 double_confirm_changes = true

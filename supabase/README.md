@@ -87,6 +87,13 @@ From project root:
 - **Tenant isolation:** Tables like `public.resources` are scoped by `organization_id`. Policies use `authz.is_org_member(organization_id)` and optionally `authz.has_permission(...)`.
 - **Super-admin override:** Many policies allow full access when `authz.is_super_admin()` is true.
 
+### JWT claims (roles + organization_id)
+
+A **custom access token hook** adds `app_metadata.roles` (array of role names) and `app_metadata.organization_id` (first org the user belongs to) to the JWT when a token is issued or refreshed. RLS helpers (`is_super_admin`, `has_role`, `is_org_member`) read these claims first, then fall back to DB lookups, so policies stay the same but do fewer DB lookups.
+
+- **Local:** The hook is enabled in `config.toml` under `[auth.hook.custom_access_token]`.
+- **Hosted:** After pushing migrations, enable the hook in the Dashboard: **Authentication → Hooks → Customize access token** → enable and set URI to `pg-functions://postgres/public/custom_access_token_hook`. Users must sign in again (or refresh the session) to get a token with the new claims.
+
 ## Adding permissions / policies
 
 1. **New permission:** Insert into `authz.permissions` (e.g. in a migration or in seed). Example: `feature.create`, `feature.delete`.
