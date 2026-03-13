@@ -1,4 +1,4 @@
-# Next.js template
+# cashfast-admin
 
 This is a Next.js template with shadcn/ui.
 
