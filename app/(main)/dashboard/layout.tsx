@@ -9,7 +9,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { users } from "@/data/users"
 import {
   SIDEBAR_COLLAPSIBLE_VALUES,
   SIDEBAR_VARIANT_VALUES,
@@ -57,10 +56,6 @@ export default async function Layout({
                 className="mx-2 data-[orientation=vertical]:h-4"
               />
               <BreadcrumbNav />
-            </div>
-            <div className="flex items-center gap-2">
-              <ThemeSwitcher />
-              <AccountSwitcher users={users} />
             </div>
           </div>
         </header>

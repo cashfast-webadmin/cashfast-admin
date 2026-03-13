@@ -1,35 +1,36 @@
-"use client";
+"use client"
 
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Monitor as MonitorIcon, MoonIcon, SunIcon } from "lucide-react"
 
-import { Button } from "@/components/ui/button";
-import { persistPreference } from "@/lib/preferences/preferences-storage";
-import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
-
-const THEME_CYCLE = ["light", "dark", "system"] as const;
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { persistPreference } from "@/lib/preferences/preferences-storage"
+import { usePreferencesStore } from "@/stores/preferences/preferences-provider"
 
 export function ThemeSwitcher() {
-  const themeMode = usePreferencesStore((s) => s.themeMode);
-  const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
+  const theme = usePreferencesStore((s) => s.themeMode)
+  const setThemeMode = usePreferencesStore((s) => s.setThemeMode)
 
-  const cycleTheme = () => {
-    const currentIndex = THEME_CYCLE.indexOf(themeMode);
-    const nextTheme = THEME_CYCLE[(currentIndex + 1) % THEME_CYCLE.length];
-
-    setThemeMode(nextTheme);
-    persistPreference("theme_mode", nextTheme);
-  };
+  const handleChange = (value: string) => {
+    const next = value as typeof theme
+    setThemeMode(next)
+    persistPreference("theme_mode", next)
+  }
 
   return (
-    <Button size="icon" onClick={cycleTheme} aria-label={`Current theme: ${themeMode}. Click to cycle themes`}>
-      {/* SYSTEM */}
-      <Monitor className="hidden [html[data-theme-mode=system]_&]:block" />
-
-      {/* DARK (resolved) */}
-      <Sun className="hidden dark:block [html[data-theme-mode=system]_&]:hidden" />
-
-      {/* LIGHT (resolved) */}
-      <Moon className="block dark:hidden [html[data-theme-mode=system]_&]:hidden" />
-    </Button>
-  );
+    <div className="py-2.5">
+      <Tabs value={theme} onValueChange={handleChange}>
+        <TabsList className="w-full">
+          <TabsTrigger value="light" className="h-6 flex-1">
+            <SunIcon className="size-4" aria-hidden="true" />
+          </TabsTrigger>
+          <TabsTrigger value="dark" className="h-6 flex-1">
+            <MoonIcon className="size-4" aria-hidden="true" />
+          </TabsTrigger>
+          <TabsTrigger value="system" className="h-6 flex-1">
+            <MonitorIcon className="size-4" aria-hidden="true" />
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </div>
+  )
 }

@@ -19,6 +19,7 @@ import { sidebarItems } from "@/navigation/sidebar/sidebar-items"
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider"
 
 import { NavMain } from "./nav-main"
+import { NavUser } from "./nav-user"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
@@ -51,7 +52,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={sidebarItems} />
       </SidebarContent>
-      <SidebarFooter>{/* <NavUser user={rootUser} /> */}</SidebarFooter>
+      <SidebarFooter>
+        <NavUser />
+      </SidebarFooter>
     </Sidebar>
   )
 }

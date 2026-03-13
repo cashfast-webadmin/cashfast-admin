@@ -2,7 +2,6 @@
 
 import {
   CircleUser,
-  CreditCard,
   EllipsisVertical,
   LogOut,
   MessageSquareDot,
@@ -24,19 +23,22 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useSignOut, useUser } from "@/hooks/use-auth"
 import { getInitials } from "@/lib/utils"
-import Link from "next/link"
+import { ThemeSwitcher } from "./theme-switcher"
 
-export function NavUser({
-  user,
-}: {
-  readonly user: {
-    readonly name: string
-    readonly email: string
-    readonly avatar: string
-  }
-}) {
+export function NavUser() {
   const { isMobile } = useSidebar()
+  const { user, isLoading } = useUser()
+  const { signOut } = useSignOut()
+
+  if (isLoading || !user) {
+    // No authenticated user; hide the user block.
+    return "Not authenticated"
+  }
+
+  const displayName = user.displayName ?? user.email ?? "User"
+  const email = user.email ?? ""
 
   return (
     <SidebarMenu>
@@ -48,15 +50,15 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                <AvatarImage src={undefined} alt={displayName} />
                 <AvatarFallback className="rounded-lg">
-                  {getInitials(user.name)}
+                  {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate font-medium">{displayName}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user.email}
+                  {email}
                 </span>
               </div>
               <EllipsisVertical className="ml-auto size-4" />
@@ -71,19 +73,21 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                  <AvatarImage src={undefined} alt={displayName} />
                   <AvatarFallback className="rounded-lg">
-                    {getInitials(user.name)}
+                    {getInitials(displayName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="truncate font-medium">{displayName}</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {user.email}
+                    {email}
                   </span>
                 </div>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <ThemeSwitcher />
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
@@ -97,12 +101,10 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
 
-            <Link prefetch={false} href="/login">
-              <DropdownMenuItem>
-                <LogOut />
-                Log out
-              </DropdownMenuItem>
-            </Link>
+            <DropdownMenuItem onClick={() => signOut()}>
+              <LogOut />
+              Log out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
