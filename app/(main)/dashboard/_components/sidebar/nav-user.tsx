@@ -6,6 +6,8 @@ import {
   LogOut,
   MessageSquareDot,
 } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -23,14 +25,21 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { useSignOut, useUser } from "@/hooks/use-auth"
+import { authApi, authQueryKeys } from "@/lib/api/auth"
 import { getInitials } from "@/lib/utils"
 import { ThemeSwitcher } from "./theme-switcher"
 
 export function NavUser() {
   const { isMobile } = useSidebar()
-  const { user, isLoading } = useUser()
-  const { signOut } = useSignOut()
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data: user, isLoading } = useQuery({
+    queryKey: authQueryKeys.user,
+    queryFn: authApi.getUser,
+  })
+  const signOutMutation = useMutation({
+    mutationFn: authApi.signOut,
+  })
 
   if (isLoading || !user) {
     // No authenticated user; hide the user block.
@@ -101,7 +110,15 @@ export function NavUser() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem onClick={() => signOut()}>
+            <DropdownMenuItem
+              onClick={async () => {
+                await signOutMutation.mutateAsync()
+                queryClient.setQueryData(authQueryKeys.user, null)
+                await queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
+                router.push("/login")
+                router.refresh()
+              }}
+            >
               <LogOut />
               Log out
             </DropdownMenuItem>

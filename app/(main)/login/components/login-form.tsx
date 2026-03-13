@@ -1,6 +1,8 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -15,7 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useSignIn } from "@/hooks/use-auth"
+import { authApi, authQueryKeys } from "@/lib/api/auth"
 
 const FormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -25,6 +27,8 @@ const FormSchema = z.object({
 })
 
 export function LoginForm() {
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -32,15 +36,25 @@ export function LoginForm() {
       password: "",
     },
   })
-  const { signIn: doSignIn, isPending } = useSignIn()
+  const signInMutation = useMutation({
+    mutationFn: authApi.signIn,
+  })
 
   const onSubmit = async (data: z.infer<typeof FormSchema>) => {
-    const result = await doSignIn({ email: data.email, password: data.password })
-    if (result.error) {
-      toast.error(result.error.message)
-      return
+    try {
+      await signInMutation.mutateAsync({
+        email: data.email,
+        password: data.password,
+      })
+      await queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
+      toast.success("Login successful")
+      router.push("/dashboard/home")
+      router.refresh()
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to sign in"
+      toast.error(message)
     }
-    toast.success("Login successful")
   }
 
   return (
@@ -85,8 +99,8 @@ export function LoginForm() {
           )}
         />
 
-        <Button className="w-full" type="submit" disabled={isPending}>
-          {isPending ? "Signing in…" : "Login"}
+        <Button className="w-full" type="submit" disabled={signInMutation.isPending}>
+          {signInMutation.isPending ? "Signing in…" : "Login"}
         </Button>
       </form>
     </Form>

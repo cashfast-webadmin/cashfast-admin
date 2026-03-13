@@ -1,6 +1,8 @@
 "use client"
 
 import { BadgeCheck, Bell, CreditCard, LogOut } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -11,12 +13,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useSignOut, useUser } from "@/hooks/use-auth"
+import { authApi, authQueryKeys } from "@/lib/api/auth"
 import { getInitials } from "@/lib/utils"
 
 export function AccountSwitcher() {
-  const { user, isLoading } = useUser()
-  const { signOut: doSignOut } = useSignOut()
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data: user, isLoading } = useQuery({
+    queryKey: authQueryKeys.user,
+    queryFn: authApi.getUser,
+  })
+  const signOutMutation = useMutation({
+    mutationFn: authApi.signOut,
+  })
 
   if (isLoading || !user) {
     return null
@@ -24,8 +33,12 @@ export function AccountSwitcher() {
 
   const displayName = user.displayName ?? user.email ?? "User"
 
-  function handleLogout() {
-    doSignOut()
+  async function handleLogout() {
+    await signOutMutation.mutateAsync()
+    queryClient.setQueryData(authQueryKeys.user, null)
+    await queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
+    router.push("/login")
+    router.refresh()
   }
 
   return (

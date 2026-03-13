@@ -1,7 +1,6 @@
 /**
- * Auth API and types. Implementations live in client.ts (browser) and middleware.ts (server).
- * Swap those when changing auth provider; types and this surface stay the same.
+ * Shared auth domain types.
+ * Client-facing auth methods live in `lib/api/auth.ts`.
  */
 
-export { getUser, signIn, signOut } from "./client"
 export type { AuthError, AuthUser, SignInCredentials } from "./types"

@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 
 import type { Metadata } from "next";
 
+import { AppProviders } from "@/app/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_CONFIG } from "@/config/app-config";
 import { fontVars } from "@/lib/fonts/registry";
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { ThemeBootScript } from "@/scripts/theme-boot";
-import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 
 import "./globals.css";
 
@@ -36,7 +36,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <ThemeBootScript />
       </head>
       <body className={`${fontVars} min-h-screen antialiased`}>
-        <PreferencesStoreProvider
+        <AppProviders
           themeMode={theme_mode}
           themePreset={theme_preset}
           contentLayout={content_layout}
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         >
           {children}
           <Toaster />
-        </PreferencesStoreProvider>
+        </AppProviders>
       </body>
     </html>
   );

@@ -1,0 +1,26 @@
+---
+description: Enforce multiline if blocks for throw statements in JS/TS
+globs: **/*.{js,jsx,ts,tsx}
+alwaysApply: false
+---
+
+# Error Throw Block Style
+
+For readability and clarity, never use one-line `if` + `throw` statements.
+
+Use explicit block form with braces and line breaks.
+
+```typescript
+// ❌ BAD
+if (error) throw new Error(error.message)
+```
+
+```typescript
+// ✅ GOOD
+if (error) {
+  throw new Error(error.message);
+}
+```
+
+Apply this rule consistently in all JS/TS code, including API modules, hooks, components, and utilities.
+
