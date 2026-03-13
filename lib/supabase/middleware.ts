@@ -1,6 +1,7 @@
 import type { CookieOptions } from "@supabase/ssr"
 import { createServerClient } from "@supabase/ssr"
 import { type NextRequest, NextResponse } from "next/server"
+import type { Database } from "@/lib/types/supabase"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey =
@@ -14,7 +15,7 @@ const supabaseKey =
 export function createServerClientForMiddleware(request: NextRequest) {
   let response = NextResponse.next({ request })
 
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll()

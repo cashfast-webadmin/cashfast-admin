@@ -27,11 +27,7 @@ export function AccountSwitcher() {
     mutationFn: authApi.signOut,
   })
 
-  if (isLoading || !user) {
-    return null
-  }
-
-  const displayName = user.displayName ?? user.email ?? "User"
+  const displayName = user?.displayName ?? user?.email ?? "User"
 
   async function handleLogout() {
     await signOutMutation.mutateAsync()

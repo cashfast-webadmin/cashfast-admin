@@ -41,13 +41,8 @@ export function NavUser() {
     mutationFn: authApi.signOut,
   })
 
-  if (isLoading || !user) {
-    // No authenticated user; hide the user block.
-    return "Not authenticated"
-  }
-
-  const displayName = user.displayName ?? user.email ?? "User"
-  const email = user.email ?? ""
+  const displayName = user?.displayName ?? user?.email ?? "User"
+  const email = user?.email ?? ""
 
   return (
     <SidebarMenu>
@@ -114,7 +109,9 @@ export function NavUser() {
               onClick={async () => {
                 await signOutMutation.mutateAsync()
                 queryClient.setQueryData(authQueryKeys.user, null)
-                await queryClient.invalidateQueries({ queryKey: authQueryKeys.user })
+                await queryClient.invalidateQueries({
+                  queryKey: authQueryKeys.user,
+                })
                 router.push("/login")
                 router.refresh()
               }}
