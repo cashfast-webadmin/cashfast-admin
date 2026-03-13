@@ -1,4 +1,4 @@
-import { LayoutDashboard, type LucideIcon, Users, Zap } from "lucide-react"
+import { LayoutDashboard, type LucideIcon, Zap } from "lucide-react"
 
 export interface NavSubItem {
   title: string
@@ -45,12 +45,6 @@ export const sidebarItems: NavGroup[] = [
         title: "Leads",
         url: "/dashboard/leads",
         icon: Zap,
-      },
-      {
-        title: "Users",
-        url: "/dashboard/coming-soon",
-        icon: Users,
-        comingSoon: true,
       },
     ],
   },

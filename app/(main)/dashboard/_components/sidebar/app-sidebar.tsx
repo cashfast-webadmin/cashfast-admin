@@ -2,15 +2,7 @@
 
 import Link from "next/link"
 
-import {
-  CircleHelp,
-  ClipboardList,
-  Command,
-  Database,
-  File,
-  Search,
-  Settings,
-} from "lucide-react"
+import { Command } from "lucide-react"
 import { useShallow } from "zustand/react/shallow"
 
 import {
@@ -23,12 +15,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { APP_CONFIG } from "@/config/app-config"
-import { rootUser } from "@/data/users"
 import { sidebarItems } from "@/navigation/sidebar/sidebar-items"
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider"
 
 import { NavMain } from "./nav-main"
-import { NavUser } from "./nav-user"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
@@ -61,9 +51,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={sidebarItems} />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={rootUser} />
-      </SidebarFooter>
+      <SidebarFooter>{/* <NavUser user={rootUser} /> */}</SidebarFooter>
     </Sidebar>
   )
 }
