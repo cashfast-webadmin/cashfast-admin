@@ -17,7 +17,7 @@ export function ThemeSwitcher() {
   }
 
   return (
-    <div className="py-2.5">
+    <div className="py-0">
       <Tabs value={theme} onValueChange={handleChange}>
         <TabsList className="w-full">
           <TabsTrigger value="light" className="h-6 flex-1">
