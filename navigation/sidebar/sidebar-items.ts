@@ -32,7 +32,7 @@ export const sidebarItems: NavGroup[] = [
     items: [
       {
         title: "Home",
-        url: "/dashboard/crm",
+        url: "/dashboard/home",
         icon: LayoutDashboard,
       },
     ],
