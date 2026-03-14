@@ -59,9 +59,7 @@ function parseNumber(value: string | number | null | undefined): number | null {
   return Number.isFinite(num) ? num : null
 }
 
-function normalizeWorkProfile(
-  v: FormLeadInput["work_profile"]
-): WorkProfile {
+function normalizeWorkProfile(v: FormLeadInput["work_profile"]): WorkProfile {
   if (!v) return "salaried"
   const s = String(v).toLowerCase().replace(/-/g, "_")
   return s === "self_employed" ? "self_employed" : "salaried"
@@ -84,7 +82,9 @@ export function prepareLeadInsert(
   const work_profile = normalizeWorkProfile(input.work_profile)
   const loan_amount = parseNumber(input.loan_amount)
   const monthly_salary =
-    work_profile === "salaried" ? parseNumber(input.monthly_salary) ?? null : null
+    work_profile === "salaried"
+      ? (parseNumber(input.monthly_salary) ?? null)
+      : null
   let annual_sales = parseNumber(input.annual_sales)
   const details: Record<string, Json> =
     input.lead_source_details && typeof input.lead_source_details === "object"
@@ -93,7 +93,8 @@ export function prepareLeadInsert(
 
   if (work_profile === "self_employed") {
     const range =
-      input.annual_sales_range?.trim() ?? (details["annual_sales_range"] as string)?.trim()
+      input.annual_sales_range?.trim() ??
+      (details["annual_sales_range"] as string)?.trim()
     if (range && annual_sales == null) {
       const lac = ANNUAL_SALES_RANGE_MID_LAC[range]
       annual_sales = lac != null ? lac * 100_000 : null

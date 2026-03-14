@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  type Updater,
   getCoreRowModel,
   getExpandedRowModel,
   getFacetedRowModel,
@@ -23,6 +24,12 @@ type UseDataTableInstanceProps<TData, TValue> = {
   defaultPageIndex?: number
   defaultPageSize?: number
   getRowId?: (row: TData, index: number) => string
+  /** When provided, column filters are controlled (e.g. from URL state). */
+  columnFilters?: ColumnFiltersState
+  onColumnFiltersChange?: (updater: Updater<ColumnFiltersState>) => void
+  /** When provided, global filter (e.g. search) is controlled (e.g. from URL state). */
+  globalFilter?: string
+  onGlobalFilterChange?: (updater: Updater<string>) => void
 }
 
 export function useDataTableInstance<TData, TValue>({
@@ -32,19 +39,36 @@ export function useDataTableInstance<TData, TValue>({
   defaultPageIndex,
   defaultPageSize,
   getRowId,
+  columnFilters: controlledColumnFilters,
+  onColumnFiltersChange: controlledOnColumnFiltersChange,
+  globalFilter: controlledGlobalFilter,
+  onGlobalFilterChange: controlledOnGlobalFilterChange,
 }: UseDataTableInstanceProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
+  const [internalColumnFilters, setInternalColumnFilters] =
+    React.useState<ColumnFiltersState>([])
+  const [internalGlobalFilter, setInternalGlobalFilter] = React.useState("")
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({})
   const [pagination, setPagination] = React.useState({
     pageIndex: defaultPageIndex ?? 0,
     pageSize: defaultPageSize ?? 10,
   })
+
+  const columnFilters =
+    controlledColumnFilters !== undefined
+      ? controlledColumnFilters
+      : internalColumnFilters
+  const setColumnFilters =
+    controlledOnColumnFiltersChange ?? setInternalColumnFilters
+  const globalFilter =
+    controlledGlobalFilter !== undefined
+      ? controlledGlobalFilter
+      : internalGlobalFilter
+  const setGlobalFilter =
+    controlledOnGlobalFilterChange ?? setInternalGlobalFilter
 
   const table = useReactTable({
     data,
@@ -54,6 +78,7 @@ export function useDataTableInstance<TData, TValue>({
       columnVisibility,
       rowSelection,
       columnFilters,
+      globalFilter,
       expanded,
       pagination,
     },
@@ -62,6 +87,7 @@ export function useDataTableInstance<TData, TValue>({
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
     onExpandedChange: (updater) =>
       setExpanded((prev) => {

@@ -19,7 +19,8 @@ function redirectWithCookies(
 export async function middleware(request: NextRequest) {
   const { user, response } = await getSessionFromRequest(request)
   const pathname = request.nextUrl.pathname
-  const isLoginPage = pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)
+  const isLoginPage =
+    pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)
 
   if (user && isLoginPage) {
     return redirectWithCookies(

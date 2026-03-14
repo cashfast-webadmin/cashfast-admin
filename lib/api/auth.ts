@@ -48,11 +48,15 @@ async function getUser(): Promise<AuthUser | null> {
   // The API user object may not include hook claims; decoding the token is reliable.
   const { data: session } = await supabase.auth.getSession()
   const payload = decodeAccessTokenPayload(session?.session?.access_token)
-  const appMeta = payload?.app_metadata ?? (user.app_metadata as {
-    roles?: string[]
-    permissions?: string[]
-    organization_id?: string
-  } | undefined)
+  const appMeta =
+    payload?.app_metadata ??
+    (user.app_metadata as
+      | {
+          roles?: string[]
+          permissions?: string[]
+          organization_id?: string
+        }
+      | undefined)
 
   return {
     id: user.id,

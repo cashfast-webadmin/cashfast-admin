@@ -49,7 +49,9 @@ function getAutoBreadcrumbs(pathname: string): BreadcrumbItemType[] {
     items.push({ label, href: isLast ? undefined : path })
   }
 
-  return items.length > 0 ? items : [{ label: "Dashboard", href: "/dashboard/home" }]
+  return items.length > 0
+    ? items
+    : [{ label: "Dashboard", href: "/dashboard/home" }]
 }
 
 export function BreadcrumbNav() {

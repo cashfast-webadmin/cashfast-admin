@@ -16,7 +16,7 @@ function DetailItem({
 }) {
   return (
     <div className="grid gap-1">
-      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <span className="text-sm">{value ?? "—"}</span>
     </div>
   )
@@ -32,7 +32,10 @@ export function LeadDetailPanel({ row }: LeadDetailPanelProps) {
         <DetailItem label="Email" value={lead.email} />
         <DetailItem label="Phone" value={lead.phone} />
         <DetailItem label="Loan type" value={lead.loan_type} />
-        <DetailItem label="Loan amount" value={formatLeadCurrency(lead.loan_amount)} />
+        <DetailItem
+          label="Loan amount"
+          value={formatLeadCurrency(lead.loan_amount)}
+        />
         <DetailItem
           label="Work profile"
           value={lead.work_profile?.replace("_", " ")}
@@ -52,7 +55,10 @@ export function LeadDetailPanel({ row }: LeadDetailPanelProps) {
         <DetailItem label="Status" value={lead.status?.replace("_", " ")} />
         <DetailItem label="Priority" value={lead.priority} />
         <DetailItem label="Created" value={formatLeadDate(lead.created_at)} />
-        <DetailItem label="Last updated" value={formatLeadDate(lead.updated_at)} />
+        <DetailItem
+          label="Last updated"
+          value={formatLeadDate(lead.updated_at)}
+        />
         <DetailItem
           label="Next follow-up"
           value={formatLeadDate(lead.next_follow_up_at)}
@@ -64,7 +70,7 @@ export function LeadDetailPanel({ row }: LeadDetailPanelProps) {
       </div>
       {lead.customer_query && (
         <div className="mt-4 grid gap-1 border-t border-border pt-4">
-          <span className="text-muted-foreground text-xs font-medium">
+          <span className="text-xs font-medium text-muted-foreground">
             Customer query
           </span>
           <p className="text-sm whitespace-pre-wrap">{lead.customer_query}</p>
@@ -74,10 +80,10 @@ export function LeadDetailPanel({ row }: LeadDetailPanelProps) {
         typeof lead.lead_source_details === "object" &&
         Object.keys(lead.lead_source_details as object).length > 0 && (
           <div className="mt-4 grid gap-1 border-t border-border pt-4">
-            <span className="text-muted-foreground text-xs font-medium">
+            <span className="text-xs font-medium text-muted-foreground">
               Source details
             </span>
-            <pre className="text-muted-foreground overflow-x-auto rounded-md bg-muted/50 p-2 text-xs">
+            <pre className="overflow-x-auto rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
               {JSON.stringify(lead.lead_source_details, null, 2)}
             </pre>
           </div>

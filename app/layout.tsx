@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import type { Metadata } from "next"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 import { AppProviders } from "@/app/providers"
 import { Toaster } from "@/components/ui/sonner"
@@ -46,18 +47,20 @@ export default function RootLayout({
         <ThemeBootScript />
       </head>
       <body className={`${fontVars} min-h-screen antialiased`}>
-        <TooltipProvider>
-          <AppProviders
-            themeMode={theme_mode}
-            themePreset={theme_preset}
-            contentLayout={content_layout}
-            navbarStyle={navbar_style}
-            font={font}
-          >
-            {children}
-            <Toaster richColors position="top-center" />
-          </AppProviders>
-        </TooltipProvider>
+        <NuqsAdapter>
+          <TooltipProvider>
+            <AppProviders
+              themeMode={theme_mode}
+              themePreset={theme_preset}
+              contentLayout={content_layout}
+              navbarStyle={navbar_style}
+              font={font}
+            >
+              {children}
+              <Toaster richColors position="top-center" />
+            </AppProviders>
+          </TooltipProvider>
+        </NuqsAdapter>
       </body>
     </html>
   )
