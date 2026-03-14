@@ -52,14 +52,6 @@ function escapeIlikePattern(term: string): string {
   return term.replace(/\\/g, "\\\\").replace(/"/g, '""')
 }
 
-async function getCurrentOrganizationId(): Promise<string> {
-  const supabase = createClient()
-  const { data, error } = await supabase.rpc("jwt_organization_id")
-  if (error) throw error
-  if (!data) throw new Error("No organization selected in the current session")
-  return data
-}
-
 async function getBlogs(params: GetBlogsParams = {}): Promise<GetBlogsResult> {
   const supabase = createClient()
   const page = params.page ?? 0
@@ -114,9 +106,11 @@ async function getBlogById(id: string): Promise<BlogRow | null> {
   return data as BlogRow
 }
 
-async function createBlog(payload: Omit<BlogInsert, "organization_id">): Promise<BlogRow> {
+async function createBlog(
+  payload: Omit<BlogInsert, "organization_id">,
+  organizationId: string
+): Promise<BlogRow> {
   const supabase = createClient()
-  const organizationId = await getCurrentOrganizationId()
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -185,9 +179,11 @@ async function getBlogTags(): Promise<BlogTagRow[]> {
   return (data ?? []) as BlogTagRow[]
 }
 
-async function createBlogTag(payload: Omit<BlogTagInsert, "organization_id">): Promise<BlogTagRow> {
+async function createBlogTag(
+  payload: Omit<BlogTagInsert, "organization_id">,
+  organizationId: string
+): Promise<BlogTagRow> {
   const supabase = createClient()
-  const organizationId = await getCurrentOrganizationId()
   const insertPayload: BlogTagInsert = {
     ...payload,
     organization_id: organizationId,

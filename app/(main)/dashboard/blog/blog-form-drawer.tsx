@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
+import { authApi, authQueryKeys } from "@/lib/api/auth"
 import {
   blogsApi,
   blogsQueryKeys,
@@ -57,6 +58,7 @@ const STATUS_OPTIONS: { label: string; value: BlogStatus }[] = [
   { label: "Published", value: "published" },
   { label: "Archived", value: "archived" },
 ]
+const EMPTY_TAGS: { id: string; name: string; slug: string }[] = []
 
 export function BlogFormDrawer({
   open,
@@ -80,11 +82,17 @@ export function BlogFormDrawer({
     },
   })
 
-  const { data: allTags = [] } = useQuery({
+  const { data: allTagsData } = useQuery({
     queryKey: blogsQueryKeys.tags(),
     queryFn: () => blogsApi.getBlogTags(),
     enabled: open,
   })
+  const { data: currentUser } = useQuery({
+    queryKey: authQueryKeys.user,
+    queryFn: authApi.getUser,
+    enabled: open,
+  })
+  const allTags = allTagsData ?? EMPTY_TAGS
 
   useEffect(() => {
     async function hydrate() {
@@ -116,10 +124,14 @@ export function BlogFormDrawer({
       }
     }
     hydrate()
-  }, [open, editBlog, form, allTags])
+  }, [open, editBlog, form, allTagsData])
 
   const createMutation = useMutation({
     mutationFn: async (data: FormValues) => {
+      const organizationId = currentUser?.organizationId
+      if (!organizationId) {
+        throw new Error("Current user organization is missing.")
+      }
       const created = await blogsApi.createBlog({
         title: data.title,
         slug: data.slug,
@@ -131,8 +143,8 @@ export function BlogFormDrawer({
         status: data.status,
         published_at:
           data.status === "published" ? new Date().toISOString() : null,
-      })
-      await syncTags(created.id, tagText, allTags)
+      }, organizationId)
+      await syncTags(created.id, tagText, allTags, organizationId)
       return created
     },
     onSuccess: () => {
@@ -148,6 +160,10 @@ export function BlogFormDrawer({
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: FormValues }) => {
+      const organizationId = currentUser?.organizationId
+      if (!organizationId) {
+        throw new Error("Current user organization is missing.")
+      }
       await blogsApi.updateBlog(id, {
         title: data.title,
         slug: data.slug,
@@ -162,7 +178,7 @@ export function BlogFormDrawer({
             ? editBlog?.published_at ?? new Date().toISOString()
             : null,
       })
-      await syncTags(id, tagText, allTags)
+      await syncTags(id, tagText, allTags, organizationId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blogs", "list"] })
@@ -419,7 +435,8 @@ export function BlogFormDrawer({
 async function syncTags(
   blogId: string,
   tagText: string,
-  existingTags: { id: string; name: string; slug: string }[]
+  existingTags: { id: string; name: string; slug: string }[],
+  organizationId: string
 ) {
   const rawNames = tagText
     .split(",")
@@ -435,7 +452,10 @@ async function syncTags(
       tagIds.push(existing.id)
       continue
     }
-    const created = await blogsApi.createBlogTag({ name, slug: normalized })
+    const created = await blogsApi.createBlogTag(
+      { name, slug: normalized },
+      organizationId
+    )
     tagIds.push(created.id)
   }
 
