@@ -18,7 +18,6 @@ import { getPreference } from "@/server/server-actions"
 
 import { BreadcrumbNav } from "./_components/breadcrumb-nav"
 import { AccountSwitcher } from "./_components/sidebar/account-switcher"
-import { ThemeSwitcher } from "./_components/sidebar/theme-switcher"
 
 export default async function Layout({
   children,
@@ -60,6 +59,9 @@ export default async function Layout({
                 className="mx-2 data-[orientation=vertical]:h-4"
               />
               <BreadcrumbNav />
+            </div>
+            <div>
+              <AccountSwitcher />
             </div>
           </div>
         </header>
