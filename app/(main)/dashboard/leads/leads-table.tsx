@@ -1,30 +1,18 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { createClient } from "@/lib/supabase/client"
 import { DataTable } from "@/components/data-table/data-table"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
 import { useDataTableInstance } from "@/hooks/use-data-table-instance"
+import { leadsApi, leadsQueryKeys } from "@/lib/api/leads"
 import { LeadDetailPanel } from "./lead-detail-panel"
-import { leadsColumns, type LeadRow } from "./columns"
-
-async function fetchLeads(): Promise<LeadRow[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("leads")
-    .select("*")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-
-  if (error) throw error
-  return (data ?? []) as LeadRow[]
-}
+import { leadsColumns } from "./columns"
 
 export function LeadsTable() {
   const { data: leads = [], isLoading, error } = useQuery({
-    queryKey: ["leads"],
-    queryFn: fetchLeads,
+    queryKey: leadsQueryKeys.list,
+    queryFn: leadsApi.getLeads,
   })
 
   const table = useDataTableInstance({

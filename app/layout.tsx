@@ -1,24 +1,34 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from "react"
 
-import type { Metadata } from "next";
+import type { Metadata } from "next"
 
-import { AppProviders } from "@/app/providers";
-import { Toaster } from "@/components/ui/sonner";
-import { APP_CONFIG } from "@/config/app-config";
-import { fontVars } from "@/lib/fonts/registry";
-import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
-import { ThemeBootScript } from "@/scripts/theme-boot";
+import { AppProviders } from "@/app/providers"
+import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { APP_CONFIG } from "@/config/app-config"
+import { fontVars } from "@/lib/fonts/registry"
+import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config"
+import { ThemeBootScript } from "@/scripts/theme-boot"
 
-import "./globals.css";
+import "./globals.css"
 
 export const metadata: Metadata = {
   title: APP_CONFIG.meta.title,
   description: APP_CONFIG.meta.description,
-};
+}
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const { theme_mode, theme_preset, content_layout, navbar_style, sidebar_variant, sidebar_collapsible, font } =
-    PREFERENCE_DEFAULTS;
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  const {
+    theme_mode,
+    theme_preset,
+    content_layout,
+    navbar_style,
+    sidebar_variant,
+    sidebar_collapsible,
+    font,
+  } = PREFERENCE_DEFAULTS
   return (
     <html
       lang="en"
@@ -36,17 +46,19 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <ThemeBootScript />
       </head>
       <body className={`${fontVars} min-h-screen antialiased`}>
-        <AppProviders
-          themeMode={theme_mode}
-          themePreset={theme_preset}
-          contentLayout={content_layout}
-          navbarStyle={navbar_style}
-          font={font}
-        >
-          {children}
-          <Toaster />
-        </AppProviders>
+        <TooltipProvider>
+          <AppProviders
+            themeMode={theme_mode}
+            themePreset={theme_preset}
+            contentLayout={content_layout}
+            navbarStyle={navbar_style}
+            font={font}
+          >
+            {children}
+            <Toaster richColors position="top-center" />
+          </AppProviders>
+        </TooltipProvider>
       </body>
     </html>
-  );
+  )
 }
