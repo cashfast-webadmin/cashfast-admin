@@ -9,6 +9,20 @@ import { createClient } from "@/lib/supabase/client"
  */
 export const authQueryKeys = {
   user: ["auth", "user"] as const,
+  accountDetails: ["auth", "accountDetails"] as const,
+}
+
+/** Extended user info for the Account page (auth user + session details). */
+export interface AccountDetails {
+  id: string
+  email: string | undefined
+  displayName?: string | null
+  roles?: string[]
+  permissions?: string[]
+  organizationId?: string | null
+  createdAt: string | null
+  lastSignInAt: string | null
+  userMetadata: Record<string, unknown>
 }
 
 /**
@@ -69,8 +83,25 @@ async function getUser(): Promise<AuthUser | null> {
   }
 }
 
+async function getAccountDetails(): Promise<AccountDetails | null> {
+  const base = await getUser()
+  if (!base) return null
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  return {
+    ...base,
+    createdAt: user.created_at ?? null,
+    lastSignInAt: user.last_sign_in_at ?? null,
+    userMetadata: (user.user_metadata as Record<string, unknown>) ?? {},
+  }
+}
+
 export const authApi = {
   getUser,
+  getAccountDetails,
   signIn,
   signOut,
 }

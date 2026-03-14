@@ -6,6 +6,7 @@ import {
   LogOut,
   MessageSquareDot,
 } from "lucide-react"
+import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -105,9 +106,11 @@ export function NavUser() {
             <ThemeSwitcher />
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <CircleUser />
-                Account
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/account">
+                  <CircleUser />
+                  Account
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <MessageSquareDot />
