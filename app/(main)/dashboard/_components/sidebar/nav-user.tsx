@@ -47,8 +47,9 @@ export function NavUser() {
 
   useEffect(() => {
     if (user) {
-      console.log("[Auth] Resolved claims (from JWT or API):", {
+      console.log("[Auth] User claims (roles, permissions, org):", {
         roles: user.roles,
+        permissions: user.permissions,
         organizationId: user.organizationId,
       })
     }

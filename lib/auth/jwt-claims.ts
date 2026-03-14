@@ -6,6 +6,7 @@
 
 export interface JwtAppMetadata {
   roles?: string[]
+  permissions?: string[]
   organization_id?: string
 }
 

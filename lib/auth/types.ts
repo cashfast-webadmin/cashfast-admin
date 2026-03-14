@@ -9,6 +9,7 @@ export interface AuthUser {
   displayName?: string | null
   /** From JWT app_metadata (custom access token hook) */
   roles?: string[]
+  permissions?: string[]
   organizationId?: string | null
 }
 
