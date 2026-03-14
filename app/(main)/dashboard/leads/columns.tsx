@@ -18,9 +18,11 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import {
+  leadPriorityOptions,
   leadStatusOptions,
   leadsApi,
   leadsQueryKeys,
+  type LeadPriority,
   type LeadRow,
   type LeadStatus,
 } from "@/lib/api/leads"
@@ -54,7 +56,7 @@ function LeadStatusSelect({
         {currentOption ? (
           <Badge
             variant="secondary"
-            className="cursor-pointer gap-1.5 px-2 py-0.5"
+            className="cursor-pointer gap-1 px-1.5 py-0 text-xs font-normal"
           >
             <span
               className={cn(
@@ -65,7 +67,7 @@ function LeadStatusSelect({
             <span>{currentOption.label}</span>
           </Badge>
         ) : (
-          <Badge variant="secondary" className="cursor-pointer">
+          <Badge variant="secondary" className="cursor-pointer text-xs">
             <SelectValue placeholder="Status" />
           </Badge>
         )}
@@ -86,8 +88,68 @@ function LeadStatusSelect({
   )
 }
 
+function LeadPrioritySelect({
+  leadId,
+  priority,
+}: {
+  leadId: string
+  priority: string
+}) {
+  const queryClient = useQueryClient()
+  const value = priority as LeadPriority
+
+  async function handleChange(newValue: LeadPriority) {
+    await leadsApi.updateLeadPriority(leadId, newValue)
+    await queryClient.invalidateQueries({ queryKey: leadsQueryKeys.list })
+  }
+
+  const currentOption = leadPriorityOptions.find((p) => p.value === value)
+
+  return (
+    <Select value={value} onValueChange={handleChange}>
+      <SelectTrigger
+        className={cn(
+          "h-auto min-h-0 w-auto min-w-0 border-0 bg-transparent p-0 shadow-none [&>svg]:hidden",
+          "focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        )}
+      >
+        {currentOption ? (
+          <Badge
+            variant="secondary"
+            className="cursor-pointer gap-1 px-1.5 py-0 text-xs font-normal"
+          >
+            <span
+              className={cn(
+                "size-1.5 shrink-0 rounded-full",
+                currentOption.color
+              )}
+            />
+            <span>{currentOption.label}</span>
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className="cursor-pointer text-xs">
+            <SelectValue placeholder="Priority" />
+          </Badge>
+        )}
+      </SelectTrigger>
+      <SelectContent position="popper">
+        <SelectGroup>
+          {leadPriorityOptions.map((p) => (
+            <SelectItem key={p.value} value={p.value}>
+              <span className="flex items-center gap-2">
+                <span className={cn("size-1.5 rounded-full", p.color)} />
+                <span>{p.label}</span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  )
+}
+
 export function formatLeadDate(iso: string | null) {
-  if (!iso) return "—"
+  if (!iso) return ""
   const d = new Date(iso)
   return d.toLocaleDateString(undefined, {
     day: "2-digit",
@@ -99,7 +161,7 @@ export function formatLeadDate(iso: string | null) {
 }
 
 export function formatLeadCurrency(value: number | null) {
-  if (value == null) return "—"
+  if (value == null) return ""
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
@@ -115,19 +177,20 @@ export const leadsColumns: ColumnDef<LeadRow>[] = [
       <Button
         variant="ghost"
         size="icon"
-        className="size-8"
+        className="size-7"
         onClick={() => row.toggleExpanded()}
         aria-label={row.getIsExpanded() ? "Collapse row" : "Expand row"}
       >
         {row.getIsExpanded() ? (
-          <ChevronDown className="size-4" />
+          <ChevronDown className="size-3.5" />
         ) : (
-          <ChevronRight className="size-4" />
+          <ChevronRight className="size-3.5" />
         )}
       </Button>
     ),
     enableSorting: false,
     enableHiding: false,
+    size: 36,
   },
   {
     id: "select",
@@ -151,108 +214,160 @@ export const leadsColumns: ColumnDef<LeadRow>[] = [
     ),
     enableSorting: false,
     enableHiding: false,
+    size: 36,
+  },
+
+  {
+    id: "contact",
+    accessorFn: (row) => [row.email, row.phone].filter(Boolean).join(" ") || "",
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title="Contact"
+        className="text-xs"
+      />
+    ),
+    cell: ({ row }) => {
+      const { email, phone } = row.original
+      const hasEmail = email != null && email !== ""
+      const hasPhone = phone != null && phone !== ""
+      if (!hasEmail && !hasPhone)
+        return <span className="text-xs text-muted-foreground">—</span>
+      return (
+        <div className="flex min-w-0 flex-col gap-0.5 text-xs text-muted-foreground">
+          {hasEmail && <span className="break-all">{email}</span>}
+          {hasPhone && <span className="tabular-nums">{phone}</span>}
+        </div>
+      )
+    },
+    minSize: 120,
   },
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Name" />
+      <DataTableColumnHeader column={column} title="Name" className="text-xs" />
     ),
-    cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+    cell: ({ row }) => (
+      <span className="text-xs font-medium">{row.original.name || ""}</span>
+    ),
     enableHiding: false,
-  },
-  {
-    accessorKey: "email",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Email" />
-    ),
-    cell: ({ row }) => (
-      <span className="block max-w-[200px] truncate text-muted-foreground">
-        {row.original.email ?? "—"}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "phone",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Phone" />
-    ),
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.phone ?? "—"}</span>
-    ),
+    size: 120,
   },
   {
     accessorKey: "loan_type",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Loan type" />
+      <DataTableColumnHeader
+        column={column}
+        title="Loan type"
+        className="text-xs"
+      />
     ),
     cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {row.original.loan_type ?? "—"}
+      <span className="text-xs text-muted-foreground">
+        {row.original.loan_type ?? ""}
       </span>
     ),
+    size: 100,
   },
   {
     accessorKey: "loan_amount",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Loan amount" />
-    ),
-    cell: ({ row }) => formatLeadCurrency(row.original.loan_amount),
-    enableSorting: true,
-  },
-  {
-    accessorKey: "work_profile",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Profile" />
+      <DataTableColumnHeader
+        column={column}
+        title="Loan amount"
+        className="text-xs"
+      />
     ),
     cell: ({ row }) => (
-      <span className="capitalize">
-        {row.original.work_profile?.replace("_", "-") ?? "—"}
+      <span className="text-xs tabular-nums">
+        {formatLeadCurrency(row.original.loan_amount)}
       </span>
     ),
+    enableSorting: true,
+    size: 100,
+  },
+  {
+    accessorKey: "priority",
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title="Priority"
+        className="text-xs"
+      />
+    ),
+    cell: ({ row }) => (
+      <LeadPrioritySelect
+        leadId={row.original.id}
+        priority={row.original.priority}
+      />
+    ),
+    filterFn: (row, id, value: string[]) =>
+      value.length === 0 || value.includes(row.getValue(id)),
+    size: 120,
   },
   {
     accessorKey: "status",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Status" />
+      <DataTableColumnHeader
+        column={column}
+        title="Status"
+        className="text-xs"
+      />
     ),
     cell: ({ row }) => (
       <LeadStatusSelect leadId={row.original.id} status={row.original.status} />
     ),
     filterFn: (row, id, value: string[]) =>
       value.length === 0 || value.includes(row.getValue(id)),
+    size: 120,
   },
   {
-    accessorKey: "source",
+    accessorKey: "assigned_to",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Source" />
+      <DataTableColumnHeader
+        column={column}
+        title="Assigned to"
+        className="text-xs"
+      />
     ),
-    cell: ({ row }) => <Badge variant="outline">{row.original.source}</Badge>,
+    cell: ({ row }) => (
+      <Badge variant="outline" className="text-xs">
+        {row.original.assigned_to}
+      </Badge>
+    ),
+    size: 100,
   },
   {
     accessorKey: "created_at",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Created" />
+      <DataTableColumnHeader
+        column={column}
+        title="Created"
+        className="text-xs"
+      />
     ),
     cell: ({ row }) => (
-      <span className="whitespace-nowrap text-muted-foreground tabular-nums">
+      <span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
         {formatLeadDate(row.original.created_at)}
       </span>
     ),
     enableSorting: true,
+    size: 100,
   },
   {
     id: "actions",
     cell: () => (
       <Button
         variant="ghost"
-        className="flex size-8 text-muted-foreground"
+        className="flex size-7 text-muted-foreground"
         size="icon"
       >
-        <EllipsisVertical />
+        <EllipsisVertical className="size-4" />
         <span className="sr-only">Open menu</span>
       </Button>
     ),
     enableSorting: false,
     enableHiding: false,
+    size: 40,
   },
 ]

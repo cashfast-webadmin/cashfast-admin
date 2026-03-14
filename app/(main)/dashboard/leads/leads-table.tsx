@@ -16,7 +16,12 @@ import { DataTableViewOptions } from "@/components/data-table/data-table-view-op
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useDataTableInstance } from "@/hooks/use-data-table-instance"
-import { leadsApi, leadsQueryKeys, leadStatusOptions } from "@/lib/api/leads"
+import {
+  leadsApi,
+  leadsQueryKeys,
+  leadPriorityOptions,
+  leadStatusOptions,
+} from "@/lib/api/leads"
 import { StatusDot } from "@/components/ui/status-dot"
 import { LeadDetailPanel } from "./lead-detail-panel"
 import { leadsColumns } from "./columns"
@@ -37,15 +42,29 @@ const leadFilterFields: FilterFieldGroup<string>[] = [
           icon: <StatusDot color={opt.color} />,
         })),
       },
+      {
+        key: "priority",
+        label: "Priority",
+        type: "multiselect",
+        searchable: true,
+        className: "w-[220px]",
+        options: leadPriorityOptions.map((opt) => ({
+          value: opt.value,
+          label: opt.label,
+          icon: <StatusDot color={opt.color} />,
+        })),
+      },
     ],
   },
 ]
 
 const statusParser = parseAsArrayOf(parseAsString).withDefault([])
+const priorityParser = parseAsArrayOf(parseAsString).withDefault([])
 const searchParser = parseAsString.withDefault("")
 
 export function LeadsTable() {
   const [status, setStatus] = useQueryState("status", statusParser)
+  const [priority, setPriority] = useQueryState("priority", priorityParser)
   const [search, setSearch] = useQueryState("search", searchParser)
 
   const {
@@ -57,10 +76,12 @@ export function LeadsTable() {
     queryFn: leadsApi.getLeads,
   })
 
-  const columnFilters = useMemo(
-    () => (status.length > 0 ? [{ id: "status" as const, value: status }] : []),
-    [status]
-  )
+  const columnFilters = useMemo(() => {
+    const entries: { id: string; value: string[] }[] = []
+    if (status.length > 0) entries.push({ id: "status", value: status })
+    if (priority.length > 0) entries.push({ id: "priority", value: priority })
+    return entries
+  }, [status, priority])
 
   const table = useDataTableInstance({
     data: leads,
@@ -78,6 +99,13 @@ export function LeadsTable() {
           : [statusEntry.value]
         : []
       setStatus(nextStatus.length > 0 ? nextStatus : null)
+      const priorityEntry = next.find((f) => f.id === "priority")
+      const nextPriority = priorityEntry?.value
+        ? Array.isArray(priorityEntry.value)
+          ? priorityEntry.value
+          : [priorityEntry.value]
+        : []
+      setPriority(nextPriority.length > 0 ? nextPriority : null)
     },
     globalFilter: search,
     onGlobalFilterChange: (updater) => {
@@ -86,34 +114,42 @@ export function LeadsTable() {
     },
   })
 
-  const filters: Filter<string>[] = useMemo(
-    () =>
-      status.length > 0
-        ? [
-            {
-              id: "status",
-              field: "status",
-              operator: "is_any_of",
-              values: status,
-            },
-          ]
-        : [],
-    [status]
-  )
+  const filters: Filter<string>[] = useMemo(() => {
+    const result: Filter<string>[] = []
+    if (status.length > 0)
+      result.push({
+        id: "status",
+        field: "status",
+        operator: "is_any_of",
+        values: status,
+      })
+    if (priority.length > 0)
+      result.push({
+        id: "priority",
+        field: "priority",
+        operator: "is_any_of",
+        values: priority,
+      })
+    return result
+  }, [status, priority])
 
   const handleFiltersChange = useCallback(
     (newFilters: Filter<string>[]) => {
       const statusFilter = newFilters.find((f) => f.field === "status")
       const nextStatus = statusFilter?.values ?? []
       setStatus(nextStatus.length > 0 ? nextStatus : null)
+      const priorityFilter = newFilters.find((f) => f.field === "priority")
+      const nextPriority = priorityFilter?.values ?? []
+      setPriority(nextPriority.length > 0 ? nextPriority : null)
     },
-    [setStatus]
+    [setStatus, setPriority]
   )
 
   const clearFilters = useCallback(() => {
     setStatus(null)
+    setPriority(null)
     setSearch(null)
-  }, [setStatus, setSearch])
+  }, [setStatus, setPriority, setSearch])
 
   const hasActiveFilters = filters.length > 0 || search.length > 0
 
@@ -140,7 +176,15 @@ export function LeadsTable() {
       <div className="flex flex-col gap-4">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h2 className="text-base font-semibold tracking-tight">Leads</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold tracking-tight">Leads</h2>
+              <span
+                className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums"
+                aria-label={`${leads.length} total leads`}
+              >
+                {leads.length}
+              </span>
+            </div>
             <Input
               placeholder="Search name, email, phone…"
               value={search}
@@ -169,11 +213,11 @@ export function LeadsTable() {
                 Clear
               </Button>
             )}
+
+            <DataTableViewOptions table={table} />
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2">
-          <DataTableViewOptions table={table} />
-        </div>
+
         <DataTable
           table={table}
           columns={leadsColumns}

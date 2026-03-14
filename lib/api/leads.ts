@@ -7,6 +7,9 @@ export type LeadRow = Database["public"]["Tables"]["leads"]["Row"]
 export type LeadStatus = LeadRow["status"]
 export type LeadUpdate = Database["public"]["Tables"]["leads"]["Update"]
 
+/** Priority values allowed by DB check constraint. */
+export type LeadPriority = "low" | "medium" | "high" | "urgent"
+
 /**
  * Status options for filters, selects, and badges. Reuse in table filters and status column.
  */
@@ -23,6 +26,20 @@ export const leadStatusOptions: {
   { value: "won", label: "Won", color: "bg-green-500" },
   { value: "lost", label: "Lost", color: "bg-destructive" },
   { value: "on_hold", label: "On hold", color: "bg-yellow-500" },
+]
+
+/**
+ * Priority options for filters and priority column select.
+ */
+export const leadPriorityOptions: {
+  value: LeadPriority
+  label: string
+  color: string
+}[] = [
+  { value: "low", label: "Low", color: "bg-green-500" },
+  { value: "medium", label: "Medium", color: "bg-yellow-500" },
+  { value: "high", label: "High", color: "bg-violet-500" },
+  { value: "urgent", label: "Urgent", color: "bg-orange-500" },
 ]
 
 /**
@@ -84,6 +101,22 @@ async function updateLeadStatus(
 }
 
 /**
+ * Update a lead's priority.
+ */
+async function updateLeadPriority(
+  leadId: string,
+  priority: LeadPriority
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("leads")
+    // @ts-expect-error -- Supabase generated types can infer update payload as never for multi-schema Database
+    .update({ priority })
+    .eq("id", leadId)
+  if (error) throw error
+}
+
+/**
  * Partial update of a lead. Only provided fields are updated.
  */
 async function updateLead(leadId: string, payload: LeadUpdate): Promise<void> {
@@ -113,6 +146,7 @@ export const leadsApi = {
   getLeads,
   getLeadById,
   updateLeadStatus,
+  updateLeadPriority,
   updateLead,
   deleteLead,
 }

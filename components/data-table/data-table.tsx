@@ -17,6 +17,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { type ColumnDef, flexRender, type Table as TanStackTable } from "@tanstack/react-table";
 
+import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { DraggableRow } from "./draggable-row";
@@ -29,6 +30,8 @@ interface DataTableProps<TData, TValue> {
   /** When provided, expanded rows render this content in a full-width cell below the row */
   renderExpandedRow?: (row: ReturnType<TanStackTable<TData>["getRowModel"]>["rows"][number]) => React.ReactNode;
 }
+
+const cellClass = "px-1.5 py-1";
 
 function renderTableBody<TData, TValue>({
   table,
@@ -46,7 +49,7 @@ function renderTableBody<TData, TValue>({
   if (!table.getRowModel().rows.length) {
     return (
       <TableRow>
-        <TableCell colSpan={columns.length} className="h-24 text-center">
+        <TableCell colSpan={columns.length} className={cn("h-24 text-center", cellClass)}>
           No results.
         </TableCell>
       </TableRow>
@@ -65,7 +68,9 @@ function renderTableBody<TData, TValue>({
     <React.Fragment key={row.id}>
       <TableRow data-state={row.getIsSelected() && "selected"}>
         {row.getVisibleCells().map((cell) => (
-          <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+          <TableCell key={cell.id} className={cellClass}>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
         ))}
       </TableRow>
       {renderExpandedRow && row.getIsExpanded() && (
@@ -85,6 +90,7 @@ export function DataTable<TData, TValue>({
   dndEnabled = false,
   onReorder,
   renderExpandedRow,
+  compact = false,
 }: DataTableProps<TData, TValue>) {
   const dataIds: UniqueIdentifier[] = table.getRowModel().rows.map((row) => Number(row.id) as UniqueIdentifier);
   const sortableId = React.useId();
@@ -103,8 +109,10 @@ export function DataTable<TData, TValue>({
   }
 
   const tableContent = (
-    <Table>
-      <TableHeader className="sticky top-0 z-10 bg-muted">
+    <Table className={compact ? "text-xs [&_th_button]:h-6 [&_th_button]:-ml-2" : undefined}>
+      <TableHeader
+        className={cn("sticky top-0 z-10 bg-muted", compact && "h-8 [&_th]:h-8 [&_th]:px-1.5 [&_th]:py-1")}
+      >
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
@@ -118,7 +126,7 @@ export function DataTable<TData, TValue>({
         ))}
       </TableHeader>
       <TableBody className="**:data-[slot=table-cell]:first:w-8">
-        {renderTableBody({ table, columns, dndEnabled, dataIds, renderExpandedRow })}
+        {renderTableBody({ table, columns, dndEnabled, dataIds, renderExpandedRow, compact })}
       </TableBody>
     </Table>
   );
