@@ -35,26 +35,27 @@ export function NavUser() {
   const { isMobile } = useSidebar()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { data: user, isLoading } = useQuery({
-    queryKey: authQueryKeys.user,
-    queryFn: authApi.getUser,
+  const { data: account } = useQuery({
+    queryKey: authQueryKeys.accountDetails,
+    queryFn: authApi.getAccountDetails,
   })
   const signOutMutation = useMutation({
     mutationFn: authApi.signOut,
   })
 
-  const displayName = user?.displayName ?? user?.email ?? "User"
-  const email = user?.email ?? ""
+  const displayName = account?.displayName ?? account?.email ?? "User"
+  const email = account?.email ?? ""
+  const avatarUrl = account?.avatarUrl ?? undefined
 
   useEffect(() => {
-    if (user) {
+    if (account) {
       console.log("[Auth] User claims (roles, permissions, org):", {
-        roles: user.roles,
-        permissions: user.permissions,
-        organizationId: user.organizationId,
+        roles: account.roles,
+        permissions: account.permissions,
+        organizationId: account.organizationId,
       })
     }
-  }, [user])
+  }, [account])
 
   return (
     <SidebarMenu>
@@ -65,8 +66,8 @@ export function NavUser() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={undefined} alt={displayName} />
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage src={avatarUrl} alt={displayName} />
                 <AvatarFallback className="rounded-lg">
                   {getInitials(displayName)}
                 </AvatarFallback>
@@ -89,7 +90,7 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={undefined} alt={displayName} />
+                  <AvatarImage src={avatarUrl} alt={displayName} />
                   <AvatarFallback className="rounded-lg">
                     {getInitials(displayName)}
                   </AvatarFallback>
@@ -122,9 +123,9 @@ export function NavUser() {
             <DropdownMenuItem
               onClick={async () => {
                 await signOutMutation.mutateAsync()
-                queryClient.setQueryData(authQueryKeys.user, null)
+                queryClient.setQueryData(authQueryKeys.accountDetails, null)
                 await queryClient.invalidateQueries({
-                  queryKey: authQueryKeys.user,
+                  queryKey: authQueryKeys.accountDetails,
                 })
                 router.push("/login")
                 router.refresh()

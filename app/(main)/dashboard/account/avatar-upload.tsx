@@ -99,32 +99,66 @@ export const AvatarUpload = forwardRef<AvatarUploadHandle, AvatarUploadProps>(
           onDrop={handleDrop}
           onClick={openFileDialog}
         >
-          <input {...getInputProps()} className="sr-only" />
+          <input {...getInputProps()} className="sr-only" aria-hidden />
 
-          {previewUrl ? (
-            <img
-              src={previewUrl}
-              alt="Avatar"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <UserIcon className="text-muted-foreground size-6" />
-            </div>
-          )}
+          {/* Layer 1: image only - forced behind with isolate */}
+          <div className="absolute inset-0 z-[0]">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Avatar"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <UserIcon className="text-muted-foreground size-6" />
+              </div>
+            )}
+          </div>
+
+          {/* Layer 2: overlay + buttons - always on top */}
+          <div className="absolute inset-0 z-[1] flex items-start justify-end p-0.5">
+            {/* Cross when new file selected */}
+            {currentFile && (
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleRemove()
+                }}
+                className="size-6 rounded-full bg-background border-border shadow-sm hover:bg-muted"
+                aria-label="Remove avatar"
+              >
+                <XIcon className="size-3.5" />
+              </Button>
+            )}
+
+            {/* Hover overlay + cross when existing avatar */}
+            {!currentFile && hasExistingAvatar && onRemoveExisting && (
+              <div
+                className="pointer-events-none absolute inset-0 rounded-full bg-black/50 opacity-0 transition-opacity group-hover/avatar:opacity-100 group-hover/avatar:pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (!isRemoving) onRemoveExisting()
+                  }}
+                  disabled={isRemoving}
+                  className="absolute right-0.5 top-0.5 size-6 rounded-full bg-background border-border shadow-sm hover:bg-muted pointer-events-auto"
+                  aria-label="Remove profile photo"
+                >
+                  <XIcon className="size-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-
-        {currentFile && (
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={handleRemove}
-            className="absolute end-0.5 top-0.5 z-10 size-6 rounded-full dark:bg-zinc-800 hover:dark:bg-zinc-700"
-            aria-label="Remove avatar"
-          >
-            <XIcon className="size-3.5" />
-          </Button>
-        )}
       </div>
 
       <div className="space-y-0.5 text-center">
@@ -155,18 +189,6 @@ export const AvatarUpload = forwardRef<AvatarUploadHandle, AvatarUploadProps>(
             Remove
           </button>
         </div>
-      )}
-
-      {!currentFile && hasExistingAvatar && onRemoveExisting && (
-        <button
-          type="button"
-          onClick={onRemoveExisting}
-          disabled={isRemoving}
-          className="text-xs font-medium text-destructive hover:underline"
-          aria-label="Remove profile photo"
-        >
-          {isRemoving ? "Removing…" : "Remove photo"}
-        </button>
       )}
 
       {errors.length > 0 && (
