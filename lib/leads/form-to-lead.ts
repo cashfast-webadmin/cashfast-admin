@@ -1,41 +1,44 @@
 /**
- * Maps website/form payloads to public.leads insert shape.
- * Use when ingesting from contact, loan-eligibility, or API.
+ * Form/API payload for leads: same field names as public.leads (snake_case).
+ * Use these names in forms so payloads match the table and need no manual mapping.
  *
- * Field mapping:
- * - name -> name
- * - email -> email (trimmed; citext handles case)
- * - phoneNumber | phone -> phone
- * - loanAmount -> loan_amount (parsed number)
- * - loanType -> loan_type
- * - workProfile -> work_profile: "Salaried" -> "salaried", "Self-Employed" -> "self_employed"
- * - salary -> monthly_salary (parsed number)
- * - annualSalesRange -> annual_sales (range parsed to numeric; range string kept in lead_source_details)
+ * Only transformations: parse string numbers, normalize work_profile value,
+ * and optional annual_sales_range -> annual_sales when present in lead_source_details.
  */
 
-import type { Database } from "@/lib/types/supabase"
+import type { Database, Json } from "@/lib/types/supabase"
 
 export type LeadInsert = Database["public"]["Tables"]["leads"]["Insert"]
 
-/** Payload shape from contact / loan-eligibility forms (or API) */
-export type FormLeadPayload = {
+/** DB enum values for work_profile */
+export type WorkProfile = "salaried" | "self_employed"
+
+/**
+ * Form payload shape: same keys as public.leads (snake_case).
+ * Numeric fields accept string | number so forms can submit strings.
+ * Omit organization_id; caller provides it when preparing the insert.
+ */
+export type FormLeadInput = {
   name?: string | null
   email?: string | null
   phone?: string | null
-  phoneNumber?: string | null
-  loanAmount?: string | number | null
-  loanType?: string | null
-  workProfile?: "Salaried" | "Self-Employed" | "salaried" | "self_employed" | string | null
-  salary?: string | number | null
-  annualSalesRange?: string | null
-  customer_query?: string | null
+  loan_amount?: string | number | null
+  loan_type?: string | null
+  work_profile?: WorkProfile | "Salaried" | "Self-Employed" | string | null
+  monthly_salary?: string | number | null
+  annual_sales?: string | number | null
   source?: string | null
   campaign?: string | null
   medium?: string | null
   referrer?: string | null
+  lead_source_details?: Record<string, unknown> | null
+  customer_query?: string | null
+  /** If UI sends a range label (e.g. "5-10 Lac"), put it here; we derive annual_sales when work_profile is self_employed */
+  annual_sales_range?: string | null
 }
 
-const ANNUAL_SALES_RANGE_TO_LAC: Record<string, number> = {
+/** Known annual sales range labels -> midpoint in lac (converted to rupees in prepare) */
+const ANNUAL_SALES_RANGE_MID_LAC: Record<string, number> = {
   "5-10 Lac": 7.5,
   "10-15 Lac": 12.5,
   "15-20 Lac": 17.5,
@@ -49,7 +52,7 @@ const ANNUAL_SALES_RANGE_TO_LAC: Record<string, number> = {
   "75-100 Lac (1 CR)": 87.5,
 }
 
-function parseAmount(value: string | number | null | undefined): number | null {
+function parseNumber(value: string | number | null | undefined): number | null {
   if (value == null) return null
   if (typeof value === "number") return Number.isFinite(value) ? value : null
   const num = Number(String(value).replace(/,/g, "").trim())
@@ -57,63 +60,65 @@ function parseAmount(value: string | number | null | undefined): number | null {
 }
 
 function normalizeWorkProfile(
-  v: FormLeadPayload["workProfile"]
-): "salaried" | "self_employed" | null {
-  if (!v) return null
-  const s = String(v).toLowerCase()
-  if (s === "salaried") return "salaried"
-  if (s === "self-employed" || s === "self_employed") return "self_employed"
-  return null
+  v: FormLeadInput["work_profile"]
+): WorkProfile {
+  if (!v) return "salaried"
+  const s = String(v).toLowerCase().replace(/-/g, "_")
+  return s === "self_employed" ? "self_employed" : "salaried"
 }
 
 /**
- * Maps form payload to lead insert row. Caller must set organization_id.
- * Ensures at least one of email/phone; normalizes work_profile and salary/sales per DB constraints.
+ * Prepares a form payload (already using table field names) into a LeadInsert.
+ * Caller must pass organization_id. Only does parsing and normalization.
  */
-export function formPayloadToLeadInsert(
-  payload: FormLeadPayload,
-  organizationId: string,
-  options?: { source?: string; campaign?: string; medium?: string; referrer?: string }
+export function prepareLeadInsert(
+  input: FormLeadInput,
+  organizationId: string
 ): LeadInsert {
-  const email = payload.email != null ? String(payload.email).trim() || null : null
-  const phone =
-    (payload.phone != null ? String(payload.phone).trim() : null) ??
-    (payload.phoneNumber != null ? String(payload.phoneNumber).trim() : null) ||
-    null
+  const email = input.email != null ? String(input.email).trim() || null : null
+  const phone = input.phone != null ? String(input.phone).trim() || null : null
   if (!email && !phone) {
     throw new Error("At least one of email or phone is required")
   }
 
-  const workProfile = normalizeWorkProfile(payload.workProfile) ?? "salaried"
-  const loanAmount = parseAmount(payload.loanAmount)
-  const monthlySalary =
-    workProfile === "salaried" ? parseAmount(payload.salary) ?? null : null
-  let annualSales: number | null = null
-  let leadSourceDetails: Record<string, unknown> = {}
-  if (workProfile === "self_employed" && payload.annualSalesRange) {
-    const range = String(payload.annualSalesRange).trim()
-    const lac = ANNUAL_SALES_RANGE_TO_LAC[range]
-    annualSales = lac != null ? lac * 100_000 : null
-    leadSourceDetails = { annual_sales_range: range }
+  const work_profile = normalizeWorkProfile(input.work_profile)
+  const loan_amount = parseNumber(input.loan_amount)
+  const monthly_salary =
+    work_profile === "salaried" ? parseNumber(input.monthly_salary) ?? null : null
+  let annual_sales = parseNumber(input.annual_sales)
+  const details: Record<string, Json> =
+    input.lead_source_details && typeof input.lead_source_details === "object"
+      ? { ...(input.lead_source_details as Record<string, Json>) }
+      : {}
+
+  if (work_profile === "self_employed") {
+    const range =
+      input.annual_sales_range?.trim() ?? (details["annual_sales_range"] as string)?.trim()
+    if (range && annual_sales == null) {
+      const lac = ANNUAL_SALES_RANGE_MID_LAC[range]
+      annual_sales = lac != null ? lac * 100_000 : null
+      details["annual_sales_range"] = range
+    }
   }
 
   return {
     organization_id: organizationId,
-    name: (payload.name != null ? String(payload.name).trim() : "") || "—",
-    email: email || null,
-    phone: phone || null,
-    loan_amount: loanAmount ?? null,
-    loan_type: payload.loanType?.trim() ?? null,
-    work_profile: workProfile,
-    monthly_salary: monthlySalary,
-    annual_sales: annualSales,
-    source: options?.source ?? payload.source ?? "website",
-    campaign: options?.campaign ?? payload.campaign ?? null,
-    medium: options?.medium ?? payload.medium ?? null,
-    referrer: options?.referrer ?? payload.referrer ?? null,
-    lead_source_details: Object.keys(leadSourceDetails).length
-      ? leadSourceDetails
-      : {},
-    customer_query: payload.customer_query?.trim() ?? null,
+    name: (input.name != null ? String(input.name).trim() : "") || "—",
+    email: email ?? null,
+    phone: phone ?? null,
+    loan_amount: loan_amount ?? null,
+    loan_type: input.loan_type?.trim() ?? null,
+    work_profile,
+    monthly_salary,
+    annual_sales,
+    source: input.source?.trim() ?? "website",
+    campaign: input.campaign?.trim() ?? null,
+    medium: input.medium?.trim() ?? null,
+    referrer: input.referrer?.trim() ?? null,
+    lead_source_details: details,
+    customer_query: input.customer_query?.trim() ?? null,
   }
 }
+
+/** @deprecated Use prepareLeadInsert with FormLeadInput (same keys as DB) */
+export const formPayloadToLeadInsert = prepareLeadInsert
