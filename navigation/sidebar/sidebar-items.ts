@@ -1,4 +1,4 @@
-import { LayoutDashboard, type LucideIcon, Zap } from "lucide-react"
+import { HelpCircle, LayoutDashboard, type LucideIcon, Zap } from "lucide-react"
 
 export interface NavSubItem {
   title: string
@@ -45,6 +45,11 @@ export const sidebarItems: NavGroup[] = [
         title: "Leads",
         url: "/dashboard/leads",
         icon: Zap,
+      },
+      {
+        title: "FAQ",
+        url: "/dashboard/faq",
+        icon: HelpCircle,
       },
     ],
   },

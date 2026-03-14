@@ -22,6 +22,7 @@ values
   ('resource.read'),
   ('leads.manage'),
   ('leads.read'),
+  ('faqs.manage'),
   ('role.manage'),
   ('permission.manage')
 on conflict (name) do nothing;
@@ -43,7 +44,8 @@ where r.name = 'admin'
     'organization.manage', 'organization.read',
     'user.manage', 'user.read',
     'resource.manage', 'resource.read',
-    'leads.manage', 'leads.read'
+    'leads.manage', 'leads.read',
+    'faqs.manage'
   )
 on conflict (role_id, permission_id) do nothing;
 
@@ -55,7 +57,8 @@ where r.name = 'member'
   and p.name in (
     'organization.read', 'user.read',
     'resource.manage', 'resource.read',
-    'leads.manage', 'leads.read'
+    'leads.manage', 'leads.read',
+    'faqs.manage'
   )
 on conflict (role_id, permission_id) do nothing;
 
