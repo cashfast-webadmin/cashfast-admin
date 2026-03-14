@@ -2,11 +2,23 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useMemo, useState } from "react"
+import {
+  CircleAlertIcon,
+  CloudUploadIcon,
+  ImageIcon,
+  UploadIcon,
+  XIcon,
+} from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -26,6 +38,10 @@ import {
 } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  useFileUpload,
+  type FileWithPreview,
+} from "@/hooks/use-file-upload"
 import { authApi, authQueryKeys } from "@/lib/api/auth"
 import {
   blogsApi,
@@ -33,6 +49,10 @@ import {
   type BlogRow,
   type BlogStatus,
 } from "@/lib/api/blogs"
+import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
+
+const BLOG_IMAGES_BUCKET = "blog-images"
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -67,6 +87,11 @@ export function BlogFormDrawer({
 }: BlogFormDrawerProps) {
   const queryClient = useQueryClient()
   const [tagText, setTagText] = useState("")
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [imageLoading, setImageLoading] = useState(false)
+  const clearFilesRef = useRef<() => void>(() => {})
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -94,6 +119,68 @@ export function BlogFormDrawer({
   })
   const allTags = allTagsData ?? EMPTY_TAGS
 
+  const uploadFeaturedImage = async (file: File): Promise<string> => {
+    const organizationId = currentUser?.organizationId
+    if (!organizationId) throw new Error("Organization is missing.")
+    const supabase = createClient()
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png"
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_").slice(0, 80)
+    const path = `${organizationId}/${crypto.randomUUID()}-${safeName}`
+    const { error } = await supabase.storage
+      .from(BLOG_IMAGES_BUCKET)
+      .upload(path, file, { upsert: false })
+    if (error) throw error
+    const { data } = supabase.storage
+      .from(BLOG_IMAGES_BUCKET)
+      .getPublicUrl(path)
+    return data.publicUrl
+  }
+
+  const [
+    {
+      files: uploadFiles,
+      isDragging,
+      errors: fileErrors,
+      removeFile,
+      openFileDialog,
+      getInputProps,
+      handleDragEnter,
+      handleDragLeave,
+      handleDragOver,
+      handleDrop,
+    },
+    clearFiles,
+  ] = useFileUpload({
+    maxFiles: 1,
+    maxSize: 5 * 1024 * 1024,
+    accept: "image/*",
+    multiple: false,
+    onFilesChange: async (files) => {
+      if (files.length === 0) return
+      setUploadError(null)
+      setIsUploading(true)
+      setUploadProgress(0)
+      setImageLoading(true)
+      const file = files[0]
+      try {
+        setUploadProgress(30)
+        const publicUrl = await uploadFeaturedImage(file.file)
+        setUploadProgress(100)
+        form.setValue("featured_image", publicUrl)
+        setUploadError(null)
+        clearFilesRef.current()
+      } catch (err) {
+        setUploadError(err instanceof Error ? err.message : "Upload failed")
+        toast.error("Failed to upload image")
+      } finally {
+        setIsUploading(false)
+        setUploadProgress(0)
+        setImageLoading(false)
+      }
+    },
+  })
+  clearFilesRef.current = clearFiles
+
   useEffect(() => {
     async function hydrate() {
       if (!open) return
@@ -107,6 +194,10 @@ export function BlogFormDrawer({
         content: editBlog?.content ?? "",
         status: editBlog?.status ?? "draft",
       })
+      setUploadError(null)
+      setUploadProgress(0)
+      setIsUploading(false)
+      clearFilesRef.current()
 
       if (!editBlog) {
         setTagText("")
@@ -353,19 +444,142 @@ export function BlogFormDrawer({
               <FormField
                 control={form.control}
                 name="featured_image"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Featured image URL</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="https://..."
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const previewUrl =
+                    uploadFiles[0]?.preview ?? (field.value || null)
+                  const hasImage = Boolean(previewUrl)
+                  return (
+                    <FormItem>
+                      <FormLabel>Featured image</FormLabel>
+                      <div
+                        className={cn(
+                          "rounded-md border transition-all duration-200",
+                          isDragging
+                            ? "border-primary bg-primary/5 border-dashed"
+                            : hasImage
+                              ? "border-border bg-background hover:border-primary/50"
+                              : "border-muted-foreground/25 border-dashed bg-muted/30 hover:border-primary hover:bg-primary/5"
+                        )}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                      >
+                        <input {...getInputProps()} className="sr-only" aria-hidden />
+
+                        {hasImage ? (
+                          <div className="relative aspect-[16/10] w-full">
+                            {imageLoading && (
+                              <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-muted">
+                                <span className="text-muted-foreground text-sm">
+                                  Loading…
+                                </span>
+                              </div>
+                            )}
+                            <img
+                              src={previewUrl ?? ""}
+                              alt="Featured"
+                              className={cn(
+                                "h-full w-full object-cover transition-opacity duration-300",
+                                imageLoading ? "opacity-0" : "opacity-100"
+                              )}
+                              onLoad={() => setImageLoading(false)}
+                              onError={() => setImageLoading(false)}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 hover:bg-black/40 hover:opacity-100">
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={openFileDialog}
+                                >
+                                  <UploadIcon className="size-4" />
+                                  Change
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => {
+                                    if (uploadFiles[0])
+                                      removeFile(uploadFiles[0].id)
+                                    field.onChange("")
+                                  }}
+                                >
+                                  <XIcon className="size-4" />
+                                  Remove
+                                </Button>
+                              </div>
+                            </div>
+                            {isUploading && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <div className="text-sm font-medium text-white">
+                                  {Math.round(uploadProgress)}%
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            className="flex aspect-[16/10] w-full cursor-pointer flex-col items-center justify-center gap-3 p-6 text-center"
+                            onClick={openFileDialog}
+                          >
+                            <div className="rounded-full bg-primary/10 p-3">
+                              <CloudUploadIcon className="text-primary size-6" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium">
+                                Upload image or drag and drop
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                PNG, JPG, WebP up to 5MB
+                              </p>
+                            </div>
+                            <Button type="button" variant="outline" size="sm">
+                              <ImageIcon className="size-4" />
+                              Browse
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-muted-foreground text-xs">
+                        Or paste image URL
+                      </p>
+                      <FormControl>
+                        <Input
+                          placeholder="https://..."
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value)
+                            setImageLoading(!!e.target.value)
+                          }}
+                        />
+                      </FormControl>
+                      {fileErrors.length > 0 && (
+                        <Alert variant="destructive">
+                          <CircleAlertIcon className="size-4" />
+                          <AlertTitle>File error</AlertTitle>
+                          <AlertDescription>
+                            {fileErrors.map((msg, i) => (
+                              <p key={i}>{msg}</p>
+                            ))}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      {uploadError && (
+                        <Alert variant="destructive">
+                          <CircleAlertIcon className="size-4" />
+                          <AlertTitle>Upload failed</AlertTitle>
+                          <AlertDescription>{uploadError}</AlertDescription>
+                        </Alert>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )
+                }}
               />
 
               <FormField
