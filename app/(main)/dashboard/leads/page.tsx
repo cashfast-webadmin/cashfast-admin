@@ -1,3 +1,9 @@
+import { LeadsTable } from "./leads-table"
+
 export default function LeadsPage() {
-  return <div>Leads</div>
+  return (
+    <div>
+      <LeadsTable />
+    </div>
+  )
 }
