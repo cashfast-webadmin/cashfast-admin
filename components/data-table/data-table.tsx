@@ -32,6 +32,8 @@ interface DataTableProps<TData, TValue> {
   /** When true, table header sticks to top of scroll container (use when table is inside overflow-auto). */
   stickyHeader?: boolean;
   compact?: boolean;
+  /** When table has no rows, render this inside the table body (e.g. loading or empty state). */
+  emptyBody?: React.ReactNode;
 }
 
 const cellClass = "px-1.5 py-1";
@@ -43,6 +45,7 @@ function renderTableBody<TData, TValue>({
   dataIds,
   renderExpandedRow,
   compact,
+  emptyBody,
 }: {
   table: TanStackTable<TData>;
   columns: ColumnDef<TData, TValue>[];
@@ -50,8 +53,10 @@ function renderTableBody<TData, TValue>({
   dataIds: UniqueIdentifier[];
   renderExpandedRow?: (row: ReturnType<TanStackTable<TData>["getRowModel"]>["rows"][number]) => React.ReactNode;
   compact?: boolean;
+  emptyBody?: React.ReactNode;
 }) {
   if (!table.getRowModel().rows.length) {
+    if (emptyBody) return <>{emptyBody}</>;
     return (
       <TableRow>
         <TableCell colSpan={columns.length} className={cn("h-24 text-center", cellClass)}>
@@ -97,6 +102,7 @@ export function DataTable<TData, TValue>({
   renderExpandedRow,
   stickyHeader = false,
   compact = false,
+  emptyBody,
 }: DataTableProps<TData, TValue>) {
   const dataIds: UniqueIdentifier[] = table.getRowModel().rows.map((row) => Number(row.id) as UniqueIdentifier);
   const sortableId = React.useId();
@@ -135,7 +141,7 @@ export function DataTable<TData, TValue>({
         ))}
       </TableHeader>
       <TableBody className="**:data-[slot=table-cell]:first:w-8">
-        {renderTableBody({ table, columns, dndEnabled, dataIds, renderExpandedRow, compact })}
+        {renderTableBody({ table, columns, dndEnabled, dataIds, renderExpandedRow, compact, emptyBody })}
       </TableBody>
     </Table>
   );

@@ -1,10 +1,25 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { EllipsisVertical, Pencil, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { Plus } from "lucide-react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { DataTable } from "@/components/data-table/data-table"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { TableCell, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { SearchInput } from "@/components/ui/search-input"
+import { useDataTableInstance } from "@/hooks/use-data-table-instance"
+import { faqsApi, faqsQueryKeys, type FaqRow } from "@/lib/api/faqs"
+
+import { getFaqColumns } from "./faq-columns"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,42 +30,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { faqsApi, faqsQueryKeys, type FaqRow } from "@/lib/api/faqs"
+import { FaqFormDrawer } from "./faq-form-drawer"
 
-import { FaqFormDialog } from "./faq-form-dialog"
-
-function truncate(str: string, maxLen: number): string {
-  if (str.length <= maxLen) return str
-  return str.slice(0, maxLen).trim() + "…"
+function filterFaqsBySearch(faqs: FaqRow[], search: string): FaqRow[] {
+  const term = search.trim().toLowerCase()
+  if (!term) return faqs
+  return faqs.filter(
+    (faq) =>
+      faq.question.toLowerCase().includes(term) ||
+      faq.answer.toLowerCase().includes(term)
+  )
 }
 
 export function FaqList() {
   const queryClient = useQueryClient()
-  const [formOpen, setFormOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [editFaq, setEditFaq] = useState<FaqRow | null>(null)
   const [deleteFaq, setDeleteFaq] = useState<FaqRow | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const { data: faqs = [], isLoading, error } = useQuery({
+  const {
+    data: faqs = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: faqsQueryKeys.list(),
     queryFn: () => faqsApi.getFaqs(),
   })
@@ -67,106 +70,126 @@ export function FaqList() {
     },
   })
 
-  const openAdd = () => {
+  const openAdd = useCallback(() => {
     setEditFaq(null)
-    setFormOpen(true)
-  }
-  const openEdit = (faq: FaqRow) => {
+    setDrawerOpen(true)
+  }, [])
+  const openEdit = useCallback((faq: FaqRow) => {
     setEditFaq(faq)
-    setFormOpen(true)
-  }
+    setDrawerOpen(true)
+  }, [])
+
+  const filteredFaqs = useMemo(
+    () => filterFaqsBySearch(faqs, searchQuery),
+    [faqs, searchQuery]
+  )
+
+  const columns = useMemo(
+    () =>
+      getFaqColumns({
+        onEdit: openEdit,
+        onDelete: setDeleteFaq,
+      }),
+    [openEdit]
+  )
+
+  const table = useDataTableInstance({
+    data: filteredFaqs,
+    columns,
+    getRowId: (row) => row.id,
+    enableRowSelection: false,
+  })
+
+  const emptyBody =
+    isLoading && faqs.length === 0 ? (
+      <TableRow>
+        <TableCell colSpan={columns.length} className="h-24 text-center">
+          <span className="text-sm text-muted-foreground">Loading FAQs…</span>
+        </TableCell>
+      </TableRow>
+    ) : !isLoading && faqs.length === 0 ? (
+      <TableRow>
+        <TableCell colSpan={columns.length} className="p-0">
+          <div className="flex items-center justify-center p-8">
+            <Empty className="bg-muted">
+              <EmptyHeader>
+                <EmptyTitle>No FAQs yet</EmptyTitle>
+                <EmptyDescription>
+                  Add FAQs here to show them on the public website. They will
+                  appear in the FAQ section and refresh after 24 hours.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={openAdd}>Add FAQ</Button>
+              </EmptyContent>
+            </Empty>
+          </div>
+        </TableCell>
+      </TableRow>
+    ) : !isLoading && filteredFaqs.length === 0 && searchQuery.trim() ? (
+      <TableRow>
+        <TableCell colSpan={columns.length} className="h-24 text-center">
+          <span className="text-sm text-muted-foreground">
+            No FAQs match your search.
+          </span>
+        </TableCell>
+      </TableRow>
+    ) : undefined
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col gap-0">
       <div className="flex shrink-0 flex-col border-b bg-background px-4 py-2">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h2 className="text-base font-semibold tracking-tight">FAQ</h2>
-          <span
-            className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums"
-            aria-label={`${faqs.length} FAQs`}
-          >
-            {faqs.length}
-          </span>
-          <Button size="sm" onClick={openAdd}>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold tracking-tight">FAQ</h2>
+            <span
+              className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums"
+              aria-label={
+                searchQuery.trim()
+                  ? `${filteredFaqs.length} of ${faqs.length} FAQs`
+                  : `${faqs.length} FAQs`
+              }
+            >
+              {searchQuery.trim()
+                ? `${filteredFaqs.length}/${faqs.length}`
+                : faqs.length}
+            </span>
+          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search question or answer…"
+            focusShortcut="mod+k"
+            focusShortcutLabel="⌘K"
+          />
+          <div className="flex flex-1 items-center gap-2.5" />
+          <Button onClick={openAdd}>
             <Plus className="size-4" />
             Add FAQ
           </Button>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {error ? (
-          <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3">
+          <div className="mx-4 mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3">
             <p className="text-sm text-destructive">
               Failed to load FAQs. {(error as Error).message}
             </p>
           </div>
-        ) : isLoading ? (
-          <div className="flex items-center justify-center rounded-md border border-dashed py-12">
-            <p className="text-sm text-muted-foreground">Loading FAQs…</p>
-          </div>
-        ) : faqs.length === 0 ? (
-          <Empty className="bg-muted">
-            <EmptyHeader>
-              <EmptyTitle>No FAQs yet</EmptyTitle>
-              <EmptyDescription>
-                Add FAQs here to show them on the public website. They will
-                appear in the FAQ section and refresh daily.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button onClick={openAdd}>Add FAQ</Button>
-            </EmptyContent>
-          </Empty>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {faqs.map((faq) => (
-              <li key={faq.id}>
-                <Card>
-                  <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
-                    <p className="text-sm font-medium leading-tight">
-                      {faq.question}
-                    </p>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <span className="sr-only">Actions</span>
-                          <EllipsisVertical className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(faq)}>
-                          <Pencil className="size-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setDeleteFaq(faq)}
-                        >
-                          <Trash2 className="size-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground">
-                      {truncate(faq.answer, 120)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Order: {faq.sort_order}
-                    </p>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        )}
+        ) : null}
+        <DataTable
+          table={table}
+          columns={columns}
+          stickyHeader
+          compact
+          emptyBody={emptyBody}
+        />
       </div>
 
-      <FaqFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
+      <FaqFormDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
         editFaq={editFaq}
       />
 
@@ -186,7 +209,7 @@ export function FaqList() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteFaq && deleteMutation.mutate(deleteFaq.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>
