@@ -27,7 +27,7 @@ begin
     raise exception 'No organization configured' using errcode = 'P0001';
   end if;
 
-  v_name := coalesce(nullif(trim(payload->>'name'), ''), '—');
+  v_name := coalesce(trim(payload->>'name'), '');
   v_work_profile := lower(coalesce(nullif(trim(payload->>'work_profile'), ''), 'salaried'));
   v_work_profile := case
     when v_work_profile in ('self-employed', 'self_employed') then 'self_employed'

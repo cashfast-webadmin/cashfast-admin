@@ -70,6 +70,6 @@ where r.name = 'viewer'
 on conflict (role_id, permission_id) do nothing;
 
 -- Default organization (idempotent)
-insert into authz.organizations (name)
-select 'cashfast'
-where not exists (select 1 from authz.organizations where name = 'cashfast');
+insert into authz.organizations (name, slug)
+values ('cashfast', 'cashfast')
+on conflict (slug) do update set name = excluded.name;
