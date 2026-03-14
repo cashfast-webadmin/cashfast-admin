@@ -1,7 +1,8 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
+import { useRef } from "react"
 import {
   Calendar,
   Clock,
@@ -12,7 +13,10 @@ import {
   ExternalLink,
 } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AvatarUpload,
+  type AvatarUploadHandle,
+} from "@/app/(main)/dashboard/account/avatar-upload"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,10 +27,22 @@ import {
   CardDescription,
 } from "@/components/ui/card"
 import { authApi, authQueryKeys } from "@/lib/api/auth"
-import { getInitials } from "@/lib/utils"
+import { toast } from "sonner"
+import { profilesApi } from "@/lib/api/profiles"
+import { createClient } from "@/lib/supabase/client"
+
+const AVATAR_BUCKET = "avatars"
+
+function getStoragePathFromPublicUrl(publicUrl: string): string | null {
+  const match = publicUrl.match(/\/object\/public\/avatars\/(.+?)(?:\?|$)/)
+  return match ? match[1] : null
+}
 
 export default function AccountPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const avatarUploadRef = useRef<AvatarUploadHandle>(null)
+
   const {
     data: account,
     isLoading,
@@ -34,6 +50,55 @@ export default function AccountPage() {
   } = useQuery({
     queryKey: authQueryKeys.accountDetails,
     queryFn: authApi.getAccountDetails,
+  })
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!account?.id) throw new Error("Not signed in")
+      const supabase = createClient()
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png"
+      const path = `${account.id}/avatar.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from(AVATAR_BUCKET)
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path)
+      await profilesApi.updateProfileAvatar(account.id, publicUrl)
+      return publicUrl
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authQueryKeys.accountDetails })
+      avatarUploadRef.current?.clearFiles()
+    },
+    onError: (err) => {
+      toast.error("Failed to upload photo", {
+        description:
+          err instanceof Error ? err.message : "Something went wrong.",
+      })
+    },
+  })
+
+  const removeAvatarMutation = useMutation({
+    mutationFn: async () => {
+      if (!account?.id || !account?.avatarUrl) return
+      const supabase = createClient()
+      const path = getStoragePathFromPublicUrl(account.avatarUrl)
+      if (path) {
+        await supabase.storage.from(AVATAR_BUCKET).remove([path])
+      }
+      await profilesApi.updateProfileAvatar(account.id, null)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authQueryKeys.accountDetails })
+    },
+    onError: (err) => {
+      toast.error("Failed to remove photo", {
+        description:
+          err instanceof Error ? err.message : "Something went wrong.",
+      })
+    },
   })
 
   if (!isLoading && !account && !error) {
@@ -77,14 +142,14 @@ export default function AccountPage() {
           <Card className="overflow-hidden border-none bg-white/50 shadow-xl ring-1 shadow-black/[0.03] ring-black/[0.05] backdrop-blur-md">
             <div className="h-24 bg-gradient-to-br from-blue-500/20 to-purple-500/20" />
             <CardContent className="relative -mt-12 flex flex-col items-center pt-0">
-              <div className="rounded-full bg-background p-1 shadow-lg">
-                <Avatar className="size-24 border-2 border-background">
-                  <AvatarImage src={account?.image} />
-                  <AvatarFallback className="bg-gradient-to-br from-slate-100 to-slate-200 text-2xl font-medium">
-                    {getInitials(displayName)}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+              <AvatarUpload
+                ref={avatarUploadRef}
+                defaultAvatar={account?.avatarUrl ?? undefined}
+                onSave={(file) => uploadMutation.mutate(file)}
+                onRemoveExisting={() => removeAvatarMutation.mutate()}
+                isSaving={uploadMutation.isPending}
+                isRemoving={removeAvatarMutation.isPending}
+              />
 
               <div className="mt-4 text-center">
                 <h2 className="text-xl font-bold tracking-tight">

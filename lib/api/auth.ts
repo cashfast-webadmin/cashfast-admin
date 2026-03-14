@@ -17,6 +17,7 @@ export interface AccountDetails {
   id: string
   email: string | undefined
   displayName?: string | null
+  avatarUrl?: string | null
   roles?: string[]
   permissions?: string[]
   organizationId?: string | null
@@ -91,8 +92,14 @@ async function getAccountDetails(): Promise<AccountDetails | null> {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return null
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("avatar_url")
+    .eq("id", user.id)
+    .single()
   return {
     ...base,
+    avatarUrl: profile?.avatar_url ?? null,
     createdAt: user.created_at ?? null,
     lastSignInAt: user.last_sign_in_at ?? null,
     userMetadata: (user.user_metadata as Record<string, unknown>) ?? {},

@@ -31,7 +31,21 @@ async function getProfilesByRole(roleName: string): Promise<ProfileRow[]> {
   return (data ?? []) as ProfileRow[]
 }
 
+/** Update avatar_url for the current user's profile (RLS: own row only). */
+async function updateProfileAvatar(
+  userId: string,
+  avatarUrl: string | null
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("profiles")
+    .update({ avatar_url: avatarUrl })
+    .eq("id", userId)
+  if (error) throw error
+}
+
 export const profilesApi = {
   getProfiles,
   getProfilesByRole,
+  updateProfileAvatar,
 }
