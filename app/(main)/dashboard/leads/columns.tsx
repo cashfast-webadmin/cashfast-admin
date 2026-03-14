@@ -180,8 +180,8 @@ function LeadAssigneeSelect({
   const [open, setOpen] = useState(false)
 
   const { data: profiles = [] } = useQuery({
-    queryKey: profilesQueryKeys.list,
-    queryFn: profilesApi.getProfiles,
+    queryKey: profilesQueryKeys.listByRole("lead_executive"),
+    queryFn: () => profilesApi.getProfilesByRole("lead_executive"),
   })
 
   const selectedProfile = profiles.find((p) => p.id === assignedTo)

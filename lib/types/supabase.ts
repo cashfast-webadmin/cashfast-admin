@@ -429,6 +429,10 @@ export type Database = {
     }
     Functions: {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      get_profiles_by_role: {
+        Args: { role_name: string }
+        Returns: { id: string; full_name: string | null; email: string | null; avatar_url: string | null; created_at: string | null }[]
+      }
     }
     Enums: {
       lead_status:

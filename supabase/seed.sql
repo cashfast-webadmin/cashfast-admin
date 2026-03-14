@@ -7,7 +7,8 @@ values
   ('super_admin'),
   ('admin'),
   ('member'),
-  ('viewer')
+  ('viewer'),
+  ('lead_executive')
 on conflict (name) do nothing;
 
 -- Permissions (resource.action format)
@@ -69,7 +70,50 @@ where r.name = 'viewer'
   )
 on conflict (role_id, permission_id) do nothing;
 
+insert into authz.role_permissions (role_id, permission_id)
+select r.id, p.id
+from authz.roles r
+cross join authz.permissions p
+where r.name = 'lead_executive'
+  and p.name in (
+    'organization.read', 'user.read',
+    'leads.manage', 'leads.read'
+  )
+on conflict (role_id, permission_id) do nothing;
+
 -- Default organization (idempotent)
 insert into authz.organizations (name, slug)
 values ('cashfast', 'cashfast')
 on conflict (slug) do update set name = excluded.name;
+
+-- Optional: assign admin@cashfast.com as super_admin
+insert into authz.user_roles (user_id, role_id)
+select u.id, r.id
+from auth.users u
+join authz.roles r on r.name = 'super_admin'
+where u.email = 'admin@cashfast.com'
+on conflict (user_id, role_id) do nothing;
+
+-- Optional: attach admin@cashfast.com to cashfast organization
+insert into authz.organization_members (user_id, organization_id, role)
+select u.id, o.id, 'owner'
+from auth.users u
+join authz.organizations o on o.slug = 'cashfast'
+where u.email = 'admin@cashfast.com'
+on conflict (user_id, organization_id) do nothing;
+
+-- Optional: assign lead@cashfast.com as lead_executive
+insert into authz.user_roles (user_id, role_id)
+select u.id, r.id
+from auth.users u
+join authz.roles r on r.name = 'lead_executive'
+where u.email = 'lead@cashfast.com'
+on conflict (user_id, role_id) do nothing;
+
+-- Optional: attach lead@cashfast.com to cashfast organization
+insert into authz.organization_members (user_id, organization_id, role)
+select u.id, o.id, 'member'
+from auth.users u
+join authz.organizations o on o.slug = 'cashfast'
+where u.email = 'lead@cashfast.com'
+on conflict (user_id, organization_id) do nothing;
