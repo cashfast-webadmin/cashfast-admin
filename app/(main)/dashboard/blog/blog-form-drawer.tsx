@@ -164,7 +164,7 @@ export function BlogFormDrawer({
       const file = files[0]
       try {
         setUploadProgress(30)
-        const publicUrl = await uploadFeaturedImage(file.file)
+        const publicUrl = await uploadFeaturedImage(file.file as File)
         setUploadProgress(100)
         form.setValue("featured_image", publicUrl)
         setUploadError(null)

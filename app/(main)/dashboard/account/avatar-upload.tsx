@@ -170,12 +170,12 @@ export const AvatarUpload = forwardRef<AvatarUploadHandle, AvatarUploadProps>(
         </p>
       </div>
 
-      {(currentFile && onSave) && (
+      {(currentFile && onSave && currentFile.file instanceof File) && (
         <div className="inline-flex items-center gap-2">
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => onSave(currentFile.file)}
+            onClick={() => onSave(currentFile.file as File)}
             disabled={isSaving}
           >
             {isSaving ? "Uploading…" : "Save photo"}

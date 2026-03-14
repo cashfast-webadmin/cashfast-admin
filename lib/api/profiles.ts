@@ -13,6 +13,7 @@ export const profilesQueryKeys = {
 async function getProfiles(): Promise<ProfileRow[]> {
   const supabase = createClient()
   const { data, error } = await supabase
+    .schema("public")
     .from("profiles")
     .select("*")
     .order("full_name", { ascending: true })
@@ -38,6 +39,7 @@ async function updateProfileAvatar(
 ): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase
+    .schema("public")
     .from("profiles")
     .update({ avatar_url: avatarUrl })
     .eq("id", userId)

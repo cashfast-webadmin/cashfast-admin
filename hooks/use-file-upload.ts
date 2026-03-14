@@ -2,9 +2,18 @@
 
 import { useCallback, useRef, useState } from "react"
 
+/** Metadata for a file or URL-based placeholder (e.g. default cover image). */
+export interface FileMetadata {
+  id: string
+  name: string
+  size?: number
+  type?: string
+  url: string
+}
+
 export interface FileWithPreview {
   id: string
-  file: File
+  file: File | FileMetadata
   preview: string
 }
 

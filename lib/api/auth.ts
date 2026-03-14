@@ -93,6 +93,7 @@ async function getAccountDetails(): Promise<AccountDetails | null> {
   } = await supabase.auth.getUser()
   if (!user) return null
   const { data: profile } = await supabase
+    .schema("public")
     .from("profiles")
     .select("avatar_url")
     .eq("id", user.id)
