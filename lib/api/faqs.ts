@@ -48,6 +48,7 @@ async function createFaq(payload: FaqInsert): Promise<FaqRow> {
     .single()
 
   if (error) throw error
+  await requestWebsiteRevalidateFaq()
   return data as FaqRow
 }
 
@@ -59,12 +60,14 @@ async function updateFaq(id: string, payload: FaqUpdate): Promise<void> {
     .update(payload)
     .eq("id", id)
   if (error) throw error
+  await requestWebsiteRevalidateFaq()
 }
 
 async function deleteFaq(id: string): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase.from("faqs").delete().eq("id", id)
   if (error) throw error
+  await requestWebsiteRevalidateFaq()
 }
 
 export const faqsApi = {
@@ -73,4 +76,18 @@ export const faqsApi = {
   createFaq,
   updateFaq,
   deleteFaq,
+}
+
+async function requestWebsiteRevalidateFaq(): Promise<void> {
+  try {
+    await fetch("/api/revalidate-blog", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        paths: ["/", "/faq"],
+      }),
+    })
+  } catch (error) {
+    console.warn("Failed to trigger FAQ revalidation:", error)
+  }
 }

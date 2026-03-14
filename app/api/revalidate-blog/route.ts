@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 type RevalidateRequestBody = {
   slug?: string | null
+  paths?: string[]
 }
 
 /**
@@ -24,10 +25,16 @@ export async function POST(request: Request) {
     )
   }
 
-  const paths = ["/blog"]
-  if (body.slug) {
-    paths.push(`/blog/${body.slug}`)
-  }
+  const paths =
+    body.paths && body.paths.length > 0
+      ? body.paths
+      : (() => {
+          const nextPaths = ["/blog"]
+          if (body.slug) {
+            nextPaths.push(`/blog/${body.slug}`)
+          }
+          return nextPaths
+        })()
 
   try {
     const response = await fetch(endpoint, {

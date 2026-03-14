@@ -116,7 +116,7 @@ export function FaqList() {
                 <EmptyTitle>No FAQs yet</EmptyTitle>
                 <EmptyDescription>
                   Add FAQs here to show them on the public website. They will
-                  appear in the FAQ section and refresh after 24 hours.
+                  appear in the FAQ section immediately after save.
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
