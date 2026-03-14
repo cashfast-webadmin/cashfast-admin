@@ -1,229 +1,179 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { ListFilterIcon, FunnelXIcon } from "lucide-react"
-import {
-  createFilter,
-  Filters,
-  type Filter,
-  type FilterFieldGroup,
-} from "@/components/reui/filters"
-import { parseAsArrayOf, parseAsString, useQueryState } from "nuqs"
+import { useEffect, useRef } from "react"
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
 import { DataTable } from "@/components/data-table/data-table"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useDataTableInstance } from "@/hooks/use-data-table-instance"
 import {
-  leadsApi,
-  leadsQueryKeys,
-  leadPriorityOptions,
-  leadStatusOptions,
-} from "@/lib/api/leads"
-import { StatusDot } from "@/components/ui/status-dot"
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Button } from "@/components/ui/button"
+import { useDataTableInstance } from "@/hooks/use-data-table-instance"
+import { useLeadsTableState } from "@/hooks/use-leads-table-state"
+import { leadsApi, leadsQueryKeys } from "@/lib/api/leads"
 import { LeadDetailPanel } from "./lead-detail-panel"
 import { leadsColumns } from "./columns"
+import { LeadsTableToolbar } from "./leads-table-toolbar"
 
-const leadFilterFields: FilterFieldGroup<string>[] = [
-  {
-    group: "Leads",
-    fields: [
-      {
-        key: "status",
-        label: "Status",
-        type: "multiselect",
-        searchable: true,
-        className: "w-[220px]",
-        options: leadStatusOptions.map((opt) => ({
-          value: opt.value,
-          label: opt.label,
-          icon: <StatusDot color={opt.color} />,
-        })),
-      },
-      {
-        key: "priority",
-        label: "Priority",
-        type: "multiselect",
-        searchable: true,
-        className: "w-[220px]",
-        options: leadPriorityOptions.map((opt) => ({
-          value: opt.value,
-          label: opt.label,
-          icon: <StatusDot color={opt.color} />,
-        })),
-      },
-    ],
-  },
-]
-
-const statusParser = parseAsArrayOf(parseAsString).withDefault([])
-const priorityParser = parseAsArrayOf(parseAsString).withDefault([])
-const searchParser = parseAsString.withDefault("")
+const INFINITE_PAGE_SIZE = 20
 
 export function LeadsTable() {
-  const [status, setStatus] = useQueryState("status", statusParser)
-  const [priority, setPriority] = useQueryState("priority", priorityParser)
-  const [search, setSearch] = useQueryState("search", searchParser)
+  const {
+    params,
+    searchInputValue,
+    setSearchInputValue,
+    sortBy,
+    sortOrder,
+    setSortBy,
+    setSortOrder,
+    filters,
+    handleFiltersChange,
+    clearFilters,
+    hasActiveFilters,
+  } = useLeadsTableState()
 
   const {
-    data: leads = [],
+    data,
     isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
     error,
-  } = useQuery({
-    queryKey: leadsQueryKeys.list,
-    queryFn: leadsApi.getLeads,
+  } = useInfiniteQuery({
+    queryKey: leadsQueryKeys.list({ ...params, pageSize: INFINITE_PAGE_SIZE }),
+    queryFn: ({ pageParam }) =>
+      leadsApi.getLeads({
+        ...params,
+        page: pageParam,
+        pageSize: INFINITE_PAGE_SIZE,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, p) => acc + p.data.length, 0)
+      return loaded < lastPage.total ? allPages.length : undefined
+    },
+    placeholderData: keepPreviousData,
   })
 
-  const columnFilters = useMemo(() => {
-    const entries: { id: string; value: string[] }[] = []
-    if (status.length > 0) entries.push({ id: "status", value: status })
-    if (priority.length > 0) entries.push({ id: "priority", value: priority })
-    return entries
-  }, [status, priority])
+  const leads = data?.pages.flatMap((p) => p.data) ?? []
+  const total = data?.pages[0]?.total ?? 0
+
+  const showInitialLoading = (isLoading || isFetching) && leads.length === 0
 
   const table = useDataTableInstance({
     data: leads,
     columns: leadsColumns,
     getRowId: (row) => row.id,
-    defaultPageSize: 10,
-    columnFilters,
-    onColumnFiltersChange: (updater) => {
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    pageCount: 1,
+    pagination: { pageIndex: 0, pageSize: Math.max(leads.length, 1) },
+    sorting: [{ id: sortBy, desc: sortOrder === "desc" }],
+    onSortingChange: (updater) => {
       const next =
-        typeof updater === "function" ? updater(columnFilters) : updater
-      const statusEntry = next.find((f) => f.id === "status")
-      const nextStatus = statusEntry?.value
-        ? Array.isArray(statusEntry.value)
-          ? statusEntry.value
-          : [statusEntry.value]
-        : []
-      setStatus(nextStatus.length > 0 ? nextStatus : null)
-      const priorityEntry = next.find((f) => f.id === "priority")
-      const nextPriority = priorityEntry?.value
-        ? Array.isArray(priorityEntry.value)
-          ? priorityEntry.value
-          : [priorityEntry.value]
-        : []
-      setPriority(nextPriority.length > 0 ? nextPriority : null)
-    },
-    globalFilter: search,
-    onGlobalFilterChange: (updater) => {
-      const next = typeof updater === "function" ? updater(search) : updater
-      setSearch(next || null)
+        typeof updater === "function"
+          ? updater([{ id: sortBy, desc: sortOrder === "desc" }])
+          : updater
+      const first = next[0]
+      if (first) {
+        const validSortBy =
+          first.id === "created_at" ||
+          first.id === "loan_amount" ||
+          first.id === "name"
+            ? first.id
+            : "created_at"
+        setSortBy(validSortBy)
+        setSortOrder(first.desc ? "desc" : "asc")
+      }
     },
   })
 
-  const filters: Filter<string>[] = useMemo(() => {
-    const result: Filter<string>[] = []
-    if (status.length > 0)
-      result.push({
-        id: "status",
-        field: "status",
-        operator: "is_any_of",
-        values: status,
-      })
-    if (priority.length > 0)
-      result.push({
-        id: "priority",
-        field: "priority",
-        operator: "is_any_of",
-        values: priority,
-      })
-    return result
-  }, [status, priority])
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
-  const handleFiltersChange = useCallback(
-    (newFilters: Filter<string>[]) => {
-      const statusFilter = newFilters.find((f) => f.field === "status")
-      const nextStatus = statusFilter?.values ?? []
-      setStatus(nextStatus.length > 0 ? nextStatus : null)
-      const priorityFilter = newFilters.find((f) => f.field === "priority")
-      const nextPriority = priorityFilter?.values ?? []
-      setPriority(nextPriority.length > 0 ? nextPriority : null)
-    },
-    [setStatus, setPriority]
-  )
-
-  const clearFilters = useCallback(() => {
-    setStatus(null)
-    setPriority(null)
-    setSearch(null)
-  }, [setStatus, setPriority, setSearch])
-
-  const hasActiveFilters = filters.length > 0 || search.length > 0
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center rounded-md border border-dashed py-12">
-        <p className="text-sm text-muted-foreground">Loading leads…</p>
-      </div>
+  useEffect(() => {
+    const el = loadMoreRef.current
+    if (!el || !hasNextPage || isFetchingNextPage) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) fetchNextPage()
+      },
+      { rootMargin: "200px", threshold: 0 }
     )
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3">
-        <p className="text-sm text-destructive">
-          Failed to load leads. {(error as Error).message}
-        </p>
-      </div>
-    )
-  }
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
-    <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
-      <div className="flex flex-col gap-4">
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold tracking-tight">Leads</h2>
-              <span
-                className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums"
-                aria-label={`${leads.length} total leads`}
-              >
-                {leads.length}
-              </span>
-            </div>
-            <Input
-              placeholder="Search name, email, phone…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value || null)}
-              className="w-[220px]"
-            />
-            <div className="flex flex-1 items-center gap-2.5">
-              <Filters
-                filters={filters}
-                fields={leadFilterFields}
-                onChange={handleFiltersChange}
-                shortcutKey="f"
-                shortcutLabel="F"
-                enableShortcut
-                trigger={
-                  <Button variant="outline" size="sm">
-                    <ListFilterIcon className="size-4" />
-                    Add filter
-                  </Button>
-                }
-              />
-            </div>
-            {hasActiveFilters && (
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                <FunnelXIcon className="size-4" />
-                Clear
-              </Button>
-            )}
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-0">
+      <LeadsTableToolbar
+        table={table}
+        total={total}
+        searchInputValue={searchInputValue}
+        setSearchInputValue={setSearchInputValue}
+        filters={filters}
+        handleFiltersChange={handleFiltersChange}
+        clearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
-            <DataTableViewOptions table={table} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {error ? (
+          <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3">
+            <p className="text-sm text-destructive">
+              Failed to load leads. {(error as Error).message}
+            </p>
           </div>
-        </div>
-
-        <DataTable
-          table={table}
-          columns={leadsColumns}
-          renderExpandedRow={(row) => <LeadDetailPanel row={row} />}
-        />
-        <DataTablePagination table={table} />
+        ) : showInitialLoading ? (
+          <div className="flex items-center justify-center rounded-md border border-dashed py-12">
+            <p className="text-sm text-muted-foreground">Loading leads…</p>
+          </div>
+        ) : leads.length === 0 ? (
+          <div className="flex items-center justify-center">
+            <Empty className="bg-muted">
+              <EmptyHeader>
+                <EmptyTitle>
+                  {hasActiveFilters ? "No results found" : "No leads yet"}
+                </EmptyTitle>
+                <EmptyDescription>
+                  {hasActiveFilters
+                    ? "No leads match your search or filters. Try adjusting your criteria."
+                    : "Leads from your website and forms will appear here."}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                {hasActiveFilters ? (
+                  <Button variant="outline" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
+                ) : null}
+              </EmptyContent>
+            </Empty>
+          </div>
+        ) : (
+          <>
+            <DataTable
+              table={table}
+              columns={leadsColumns}
+              renderExpandedRow={(row) => <LeadDetailPanel row={row} />}
+              stickyHeader
+            />
+            {hasNextPage ? (
+              <div
+                ref={loadMoreRef}
+                className="flex items-center justify-center py-4"
+              >
+                {isFetchingNextPage ? (
+                  <p className="text-sm text-muted-foreground">Loading more…</p>
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   )

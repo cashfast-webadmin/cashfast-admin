@@ -493,6 +493,8 @@ export interface FilterFieldConfig<T = unknown> {
   onInputChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
   // Default operator to use when creating a filter for this field
   defaultOperator?: string
+  /** When true, the operator dropdown is hidden (useful for simple filters like status/priority). */
+  hideOperator?: boolean
   // Controlled values support for this field
   value?: T[]
   onValueChange?: (values: T[]) => void
@@ -1100,12 +1102,14 @@ export const FiltersContent = <T = unknown,>({
               {field.label}
             </ButtonGroupText>
 
-            <FilterOperatorDropdown<T>
-              field={field}
-              operator={filter.operator}
-              values={filter.values}
-              onChange={(operator) => updateFilter(filter.id, { operator })}
-            />
+            {!field.hideOperator && (
+              <FilterOperatorDropdown<T>
+                field={field}
+                operator={filter.operator}
+                values={filter.values}
+                onChange={(operator) => updateFilter(filter.id, { operator })}
+              />
+            )}
 
             <FilterValueSelector<T>
               field={field}
@@ -1823,12 +1827,14 @@ export function Filters<T = unknown>({
                 {field.icon && field.icon}
                 {field.label}
               </ButtonGroupText>
-              <FilterOperatorDropdown<T>
-                field={field}
-                operator={filter.operator}
-                values={filter.values}
-                onChange={(operator) => updateFilter(filter.id, { operator })}
-              />
+              {!field.hideOperator && (
+                <FilterOperatorDropdown<T>
+                  field={field}
+                  operator={filter.operator}
+                  values={filter.values}
+                  onChange={(operator) => updateFilter(filter.id, { operator })}
+                />
+              )}
               <FilterValueSelector<T>
                 field={field}
                 values={filter.values}

@@ -31,10 +31,14 @@ export default async function Layout({
   ])
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
+    <SidebarProvider
+      defaultOpen={defaultOpen}
+      className="h-svh overflow-hidden"
+    >
       <AppSidebar variant={variant} collapsible={collapsible} />
       <SidebarInset
         className={cn(
+          "min-h-0",
           "[html[data-content-layout=centered]_&]:mx-auto! [html[data-content-layout=centered]_&]:max-w-screen-2xl!",
           // Adds right margin for inset sidebar in centered layout up to 113rem.
           // On wider screens with collapsed sidebar, removes margin and sets margin auto for alignment.
@@ -59,7 +63,7 @@ export default async function Layout({
             </div>
           </div>
         </header>
-        <div className="h-full p-4 md:p-6">{children}</div>
+        <div className="relative flex min-h-0 flex-1 flex-col">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

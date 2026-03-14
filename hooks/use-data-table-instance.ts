@@ -30,6 +30,18 @@ type UseDataTableInstanceProps<TData, TValue> = {
   /** When provided, global filter (e.g. search) is controlled (e.g. from URL state). */
   globalFilter?: string
   onGlobalFilterChange?: (updater: Updater<string>) => void
+  /** Server-side: data is already filtered/sorted/paginated; table only displays. */
+  manualPagination?: boolean
+  manualSorting?: boolean
+  manualFiltering?: boolean
+  /** Total number of pages (required when manualPagination is true). */
+  pageCount?: number
+  /** Controlled pagination state (use with manualPagination). */
+  pagination?: { pageIndex: number; pageSize: number }
+  onPaginationChange?: (updater: Updater<{ pageIndex: number; pageSize: number }>) => void
+  /** Controlled sorting state (use with manualSorting). */
+  sorting?: SortingState
+  onSortingChange?: (updater: Updater<SortingState>) => void
 }
 
 export function useDataTableInstance<TData, TValue>({
@@ -43,6 +55,14 @@ export function useDataTableInstance<TData, TValue>({
   onColumnFiltersChange: controlledOnColumnFiltersChange,
   globalFilter: controlledGlobalFilter,
   onGlobalFilterChange: controlledOnGlobalFilterChange,
+  manualPagination = false,
+  manualSorting = false,
+  manualFiltering = false,
+  pageCount,
+  pagination: controlledPagination,
+  onPaginationChange: controlledOnPaginationChange,
+  sorting: controlledSorting,
+  onSortingChange: controlledOnSortingChange,
 }: UseDataTableInstanceProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -50,9 +70,9 @@ export function useDataTableInstance<TData, TValue>({
   const [internalColumnFilters, setInternalColumnFilters] =
     React.useState<ColumnFiltersState>([])
   const [internalGlobalFilter, setInternalGlobalFilter] = React.useState("")
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>([])
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({})
-  const [pagination, setPagination] = React.useState({
+  const [internalPagination, setInternalPagination] = React.useState({
     pageIndex: defaultPageIndex ?? 0,
     pageSize: defaultPageSize ?? 10,
   })
@@ -69,6 +89,13 @@ export function useDataTableInstance<TData, TValue>({
       : internalGlobalFilter
   const setGlobalFilter =
     controlledOnGlobalFilterChange ?? setInternalGlobalFilter
+  const sorting =
+    controlledSorting !== undefined ? controlledSorting : internalSorting
+  const setSorting = controlledOnSortingChange ?? setInternalSorting
+  const pagination =
+    controlledPagination !== undefined ? controlledPagination : internalPagination
+  const setPagination =
+    controlledOnPaginationChange ?? setInternalPagination
 
   const table = useReactTable({
     data,
@@ -96,12 +123,17 @@ export function useDataTableInstance<TData, TValue>({
       }),
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: manualFiltering ? undefined : getFilteredRowModel(),
+    getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
+    getSortedRowModel: manualSorting ? undefined : getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedRowModel: manualFiltering ? undefined : getFacetedRowModel(),
+    getFacetedUniqueValues:
+      manualFiltering ? undefined : getFacetedUniqueValues(),
+    manualPagination: manualPagination ?? false,
+    manualSorting: manualSorting ?? false,
+    manualFiltering: manualFiltering ?? false,
+    pageCount: pageCount ?? (manualPagination ? -1 : undefined),
   })
 
   return table

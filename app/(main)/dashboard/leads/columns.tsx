@@ -1,8 +1,14 @@
 "use client"
 
-import { useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
-import { ChevronDown, ChevronRight, EllipsisVertical } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronRight,
+  EllipsisVertical,
+  UserPlus,
+  Check,
+} from "lucide-react"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import {
@@ -16,6 +22,19 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import {
   leadPriorityOptions,
@@ -26,6 +45,8 @@ import {
   type LeadRow,
   type LeadStatus,
 } from "@/lib/api/leads"
+import { profilesApi, profilesQueryKeys } from "@/lib/api/profiles"
+import { useState } from "react"
 
 export type { LeadRow } from "@/lib/api/leads"
 
@@ -40,7 +61,7 @@ function LeadStatusSelect({
 
   async function handleChange(value: LeadStatus) {
     await leadsApi.updateLeadStatus(leadId, value)
-    await queryClient.invalidateQueries({ queryKey: leadsQueryKeys.list })
+    await queryClient.invalidateQueries({ queryKey: ["leads", "list"] })
   }
 
   const currentOption = leadStatusOptions.find((s) => s.value === status)
@@ -100,7 +121,7 @@ function LeadPrioritySelect({
 
   async function handleChange(newValue: LeadPriority) {
     await leadsApi.updateLeadPriority(leadId, newValue)
-    await queryClient.invalidateQueries({ queryKey: leadsQueryKeys.list })
+    await queryClient.invalidateQueries({ queryKey: ["leads", "list"] })
   }
 
   const currentOption = leadPriorityOptions.find((p) => p.value === value)
@@ -148,6 +169,88 @@ function LeadPrioritySelect({
   )
 }
 
+function LeadAssigneeSelect({
+  leadId,
+  assignedTo,
+}: {
+  leadId: string
+  assignedTo: string | null
+}) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: profilesQueryKeys.list,
+    queryFn: profilesApi.getProfiles,
+  })
+
+  const selectedProfile = profiles.find((p) => p.id === assignedTo)
+
+  async function handleSelect(userId: string | null) {
+    setOpen(false)
+    await leadsApi.updateLeadAssignee(leadId, userId)
+    await queryClient.invalidateQueries({ queryKey: ["leads", "list"] })
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        {selectedProfile ? (
+          <Button
+            variant="ghost"
+            className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
+          >
+            {selectedProfile.full_name ||
+              selectedProfile.email ||
+              "Unknown User"}
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="xs"
+            className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
+          >
+            <UserPlus className="size-3" />
+            Assign
+          </Button>
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-[200px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search user..." className="h-9 text-xs" />
+          <CommandList>
+            <CommandEmpty>No users found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="unassigned"
+                onSelect={() => handleSelect(null)}
+                className="text-xs"
+              >
+                <span className="flex-1">Unassigned</span>
+                {assignedTo === null && <Check className="size-3" />}
+              </CommandItem>
+              {profiles.map((profile) => (
+                <CommandItem
+                  key={profile.id}
+                  value={profile.id}
+                  keywords={[profile.full_name || "", profile.email || ""]}
+                  onSelect={() => handleSelect(profile.id)}
+                  className="text-xs"
+                >
+                  <span className="flex-1 truncate">
+                    {profile.full_name || profile.email}
+                  </span>
+                  {assignedTo === profile.id && <Check className="size-3" />}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function formatLeadDate(iso: string | null) {
   if (!iso) return ""
   const d = new Date(iso)
@@ -171,51 +274,57 @@ export function formatLeadCurrency(value: number | null) {
 
 export const leadsColumns: ColumnDef<LeadRow>[] = [
   {
-    id: "expand",
-    header: () => null,
+    id: "index",
+    header: () => (
+      <span className="ps-2.5 text-xs text-muted-foreground tabular-nums">
+        #
+      </span>
+    ),
     cell: ({ row }) => (
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-7"
-        onClick={() => row.toggleExpanded()}
-        aria-label={row.getIsExpanded() ? "Collapse row" : "Expand row"}
-      >
-        {row.getIsExpanded() ? (
-          <ChevronDown className="size-3.5" />
-        ) : (
-          <ChevronRight className="size-3.5" />
-        )}
-      </Button>
+      <span className="text-xs text-muted-foreground tabular-nums">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="w-12"
+          onClick={() => row.toggleExpanded()}
+          aria-label={row.getIsExpanded() ? "Collapse row" : "Expand row"}
+        >
+          {row.index + 1}
+          {/* {row.getIsExpanded() ? (
+            <ChevronDown className="size-3.5" />
+          ) : (
+            <ChevronRight className="size-3.5" />
+          )} */}
+        </Button>
+      </span>
     ),
     enableSorting: false,
     enableHiding: false,
-    size: 36,
   },
-  {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-    size: 36,
-  },
+  // {
+  //   id: "select",
+  //   header: ({ table }) => (
+  //     <div className="flex items-center justify-center">
+  //       <Checkbox
+  //         checked={table.getIsAllPageRowsSelected()}
+  //         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+  //         aria-label="Select all"
+  //       />
+  //     </div>
+  //   ),
+  //   cell: ({ row }) => (
+  //     <div className="flex items-center justify-center">
+  //       <Checkbox
+  //         checked={row.getIsSelected()}
+  //         onCheckedChange={(value) => row.toggleSelected(!!value)}
+  //         aria-label="Select row"
+  //       />
+  //     </div>
+  //   ),
+  //   enableSorting: false,
+  //   enableHiding: false,
+  //   size: 36,
+  // },
 
   {
     id: "contact",
@@ -231,10 +340,9 @@ export const leadsColumns: ColumnDef<LeadRow>[] = [
       const { email, phone } = row.original
       const hasEmail = email != null && email !== ""
       const hasPhone = phone != null && phone !== ""
-      if (!hasEmail && !hasPhone)
-        return <span className="text-xs text-muted-foreground">—</span>
+      if (!hasEmail && !hasPhone) return <span className="text-xs">—</span>
       return (
-        <div className="flex min-w-0 flex-col gap-0.5 text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-col gap-0.5 text-xs">
           {hasEmail && <span className="break-all">{email}</span>}
           {hasPhone && <span className="tabular-nums">{phone}</span>}
         </div>
@@ -252,39 +360,6 @@ export const leadsColumns: ColumnDef<LeadRow>[] = [
     ),
     enableHiding: false,
     size: 120,
-  },
-  {
-    accessorKey: "loan_type",
-    header: ({ column }) => (
-      <DataTableColumnHeader
-        column={column}
-        title="Loan type"
-        className="text-xs"
-      />
-    ),
-    cell: ({ row }) => (
-      <span className="text-xs text-muted-foreground">
-        {row.original.loan_type ?? ""}
-      </span>
-    ),
-    size: 100,
-  },
-  {
-    accessorKey: "loan_amount",
-    header: ({ column }) => (
-      <DataTableColumnHeader
-        column={column}
-        title="Loan amount"
-        className="text-xs"
-      />
-    ),
-    cell: ({ row }) => (
-      <span className="text-xs tabular-nums">
-        {formatLeadCurrency(row.original.loan_amount)}
-      </span>
-    ),
-    enableSorting: true,
-    size: 100,
   },
   {
     accessorKey: "priority",
@@ -331,9 +406,10 @@ export const leadsColumns: ColumnDef<LeadRow>[] = [
       />
     ),
     cell: ({ row }) => (
-      <Badge variant="outline" className="text-xs">
-        {row.original.assigned_to}
-      </Badge>
+      <LeadAssigneeSelect
+        leadId={row.original.id}
+        assignedTo={row.original.assigned_to}
+      />
     ),
     size: 100,
   },

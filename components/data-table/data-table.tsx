@@ -29,6 +29,9 @@ interface DataTableProps<TData, TValue> {
   onReorder?: (newData: TData[]) => void;
   /** When provided, expanded rows render this content in a full-width cell below the row */
   renderExpandedRow?: (row: ReturnType<TanStackTable<TData>["getRowModel"]>["rows"][number]) => React.ReactNode;
+  /** When true, table header sticks to top of scroll container (use when table is inside overflow-auto). */
+  stickyHeader?: boolean;
+  compact?: boolean;
 }
 
 const cellClass = "px-1.5 py-1";
@@ -39,12 +42,14 @@ function renderTableBody<TData, TValue>({
   dndEnabled,
   dataIds,
   renderExpandedRow,
+  compact,
 }: {
   table: TanStackTable<TData>;
   columns: ColumnDef<TData, TValue>[];
   dndEnabled: boolean;
   dataIds: UniqueIdentifier[];
   renderExpandedRow?: (row: ReturnType<TanStackTable<TData>["getRowModel"]>["rows"][number]) => React.ReactNode;
+  compact?: boolean;
 }) {
   if (!table.getRowModel().rows.length) {
     return (
@@ -90,6 +95,7 @@ export function DataTable<TData, TValue>({
   dndEnabled = false,
   onReorder,
   renderExpandedRow,
+  stickyHeader = false,
   compact = false,
 }: DataTableProps<TData, TValue>) {
   const dataIds: UniqueIdentifier[] = table.getRowModel().rows.map((row) => Number(row.id) as UniqueIdentifier);
@@ -109,7 +115,10 @@ export function DataTable<TData, TValue>({
   }
 
   const tableContent = (
-    <Table className={compact ? "text-xs [&_th_button]:h-6 [&_th_button]:-ml-2" : undefined}>
+    <Table
+      noScrollWrapper={stickyHeader}
+      className={compact ? "text-xs [&_th_button]:h-6 [&_th_button]:-ml-2" : undefined}
+    >
       <TableHeader
         className={cn("sticky top-0 z-10 bg-muted", compact && "h-8 [&_th]:h-8 [&_th]:px-1.5 [&_th]:py-1")}
       >

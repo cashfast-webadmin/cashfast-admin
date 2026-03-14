@@ -42,27 +42,91 @@ export const leadPriorityOptions: {
   { value: "urgent", label: "Urgent", color: "bg-orange-500" },
 ]
 
+/** Params for server-side leads list (filter, search, sort, pagination). */
+export type GetLeadsParams = {
+  search?: string
+  status?: string[]
+  priority?: string[]
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
+  page?: number
+  pageSize?: number
+}
+
+/** Result of server-side getLeads: one page of rows + total count. */
+export type GetLeadsResult = {
+  data: LeadRow[]
+  total: number
+}
+
+/** Sortable column ids allowed by the API. */
+const SORTABLE_COLUMNS = ["created_at", "loan_amount", "name"] as const
+
+/**
+ * Escape for PostgREST ilike: preserve % and _ for SQL LIKE, escape \ and " for
+ * use inside double-quoted value (PostgREST reserves , : ( ) and treats values
+ * with special chars better when double-quoted).
+ */
+function escapeIlikePattern(term: string): string {
+  return term
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '""')
+}
+
 /**
  * Query keys used by React Query for leads.
  */
 export const leadsQueryKeys = {
-  list: ["leads"] as const,
+  list: (params: GetLeadsParams) => ["leads", "list", params] as const,
   detail: (id: string) => ["leads", id] as const,
 }
 
 /**
- * Fetch all leads for the current org (RLS applies). Excludes soft-deleted.
+ * Fetch leads with server-side filter, search, sort, and pagination.
+ * RLS applies. Excludes soft-deleted. Returns one page and total count.
  */
-async function getLeads(): Promise<LeadRow[]> {
+async function getLeads(params: GetLeadsParams = {}): Promise<GetLeadsResult> {
   const supabase = createClient()
-  const { data, error } = await supabase
+  const page = params.page ?? 0
+  const pageSize = params.pageSize ?? 10
+  const sortBy =
+    params.sortBy && SORTABLE_COLUMNS.includes(params.sortBy as (typeof SORTABLE_COLUMNS)[number])
+      ? params.sortBy
+      : "created_at"
+  const ascending = params.sortOrder !== "desc"
+
+  let query = supabase
     .from("leads")
-    .select("*")
+    .select("*", { count: "exact" })
     .is("deleted_at", null)
-    .order("created_at", { ascending: false })
+
+  if (params.status?.length) {
+    query = query.in("status", params.status)
+  }
+  if (params.priority?.length) {
+    query = query.in("priority", params.priority)
+  }
+  const search = params.search?.trim()
+  if (search) {
+    const escaped = escapeIlikePattern(search)
+    const pattern = `"%${escaped}%"`
+    query = query.or(
+      `name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`
+    )
+  }
+
+  query = query.order(sortBy, { ascending })
+  const from = page * pageSize
+  const to = from + pageSize - 1
+  query = query.range(from, to)
+
+  const { data, error, count } = await query
 
   if (error) throw error
-  return (data ?? []) as LeadRow[]
+  return {
+    data: (data ?? []) as LeadRow[],
+    total: count ?? 0,
+  }
 }
 
 /**
@@ -117,6 +181,22 @@ async function updateLeadPriority(
 }
 
 /**
+ * Update a lead's assignee.
+ */
+async function updateLeadAssignee(
+  leadId: string,
+  assignedTo: string | null
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("leads")
+    // @ts-expect-error -- Supabase generated types can infer update payload as never for multi-schema Database
+    .update({ assigned_to: assignedTo })
+    .eq("id", leadId)
+  if (error) throw error
+}
+
+/**
  * Partial update of a lead. Only provided fields are updated.
  */
 async function updateLead(leadId: string, payload: LeadUpdate): Promise<void> {
@@ -147,6 +227,7 @@ export const leadsApi = {
   getLeadById,
   updateLeadStatus,
   updateLeadPriority,
+  updateLeadAssignee,
   updateLead,
   deleteLead,
 }
