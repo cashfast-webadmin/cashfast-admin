@@ -124,6 +124,7 @@ export function FaqFormDrawer({
           <div className="flex shrink-0 items-center gap-2">
             <Button
               className="min-w-18"
+              size="lg"
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
@@ -132,6 +133,7 @@ export function FaqFormDrawer({
             </Button>
             <Button
               className="min-w-18"
+              size="lg"
               type="submit"
               form="faq-form"
               disabled={isPending}

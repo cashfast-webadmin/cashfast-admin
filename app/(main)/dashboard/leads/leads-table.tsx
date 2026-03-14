@@ -10,7 +10,9 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { TableCell, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useDataTableInstance } from "@/hooks/use-data-table-instance"
 import { useLeadsTableState } from "@/hooks/use-leads-table-state"
 import { leadsApi, leadsQueryKeys } from "@/lib/api/leads"
@@ -63,6 +65,57 @@ export function LeadsTable() {
   const total = data?.pages[0]?.total ?? 0
 
   const showInitialLoading = (isLoading || isFetching) && leads.length === 0
+
+  const emptyBody = error ? (
+    <TableRow>
+      <TableCell
+        colSpan={leadsColumns.length}
+        className="px-4 py-6 text-center"
+      >
+        <p className="text-sm text-destructive">
+          Failed to load leads. {(error as Error).message}
+        </p>
+      </TableCell>
+    </TableRow>
+  ) : showInitialLoading ? (
+    <>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <TableRow key={i}>
+          {leadsColumns.map((_, j) => (
+            <TableCell key={j} className="px-1.5 py-1">
+              <Skeleton className="h-6 w-full" />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  ) : leads.length === 0 ? (
+    <TableRow>
+      <TableCell colSpan={leadsColumns.length} className="p-0">
+        <div className="flex items-center justify-center p-8">
+          <Empty className="bg-muted">
+            <EmptyHeader>
+              <EmptyTitle>
+                {hasActiveFilters ? "No results found" : "No leads yet"}
+              </EmptyTitle>
+              <EmptyDescription>
+                {hasActiveFilters
+                  ? "No leads match your search or filters. Try adjusting your criteria."
+                  : "Leads from your website and forms will appear here."}
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              {hasActiveFilters ? (
+                <Button variant="outline" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              ) : null}
+            </EmptyContent>
+          </Empty>
+        </div>
+      </TableCell>
+    </TableRow>
+  ) : undefined
 
   const table = useDataTableInstance({
     data: leads,
@@ -122,58 +175,20 @@ export function LeadsTable() {
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {error ? (
-          <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3">
-            <p className="text-sm text-destructive">
-              Failed to load leads. {(error as Error).message}
-            </p>
-          </div>
-        ) : showInitialLoading ? (
-          <div className="flex items-center justify-center rounded-md border border-dashed py-12">
-            <p className="text-sm text-muted-foreground">Loading leads…</p>
-          </div>
-        ) : leads.length === 0 ? (
-          <div className="flex items-center justify-center">
-            <Empty className="bg-muted">
-              <EmptyHeader>
-                <EmptyTitle>
-                  {hasActiveFilters ? "No results found" : "No leads yet"}
-                </EmptyTitle>
-                <EmptyDescription>
-                  {hasActiveFilters
-                    ? "No leads match your search or filters. Try adjusting your criteria."
-                    : "Leads from your website and forms will appear here."}
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                {hasActiveFilters ? (
-                  <Button variant="outline" onClick={clearFilters}>
-                    Clear filters
-                  </Button>
-                ) : null}
-              </EmptyContent>
-            </Empty>
-          </div>
-        ) : (
-          <>
-            <DataTable
-              table={table}
-              columns={leadsColumns}
-              renderExpandedRow={(row) => <LeadDetailPanel row={row} />}
-              stickyHeader
-            />
-            {hasNextPage ? (
-              <div
-                ref={loadMoreRef}
-                className="flex items-center justify-center py-4"
-              >
-                {isFetchingNextPage ? (
-                  <p className="text-sm text-muted-foreground">Loading more…</p>
-                ) : null}
-              </div>
+        <DataTable
+          table={table}
+          columns={leadsColumns}
+          renderExpandedRow={(row) => <LeadDetailPanel row={row} />}
+          stickyHeader
+          emptyBody={emptyBody}
+        />
+        {leads.length > 0 && hasNextPage ? (
+          <div ref={loadMoreRef} className="flex justify-center py-4">
+            {isFetchingNextPage ? (
+              <p className="text-sm text-muted-foreground">Loading more…</p>
             ) : null}
-          </>
-        )}
+          </div>
+        ) : null}
       </div>
     </div>
   )

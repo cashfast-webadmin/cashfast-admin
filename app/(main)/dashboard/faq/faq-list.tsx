@@ -163,7 +163,7 @@ export function FaqList() {
             focusShortcutLabel="⌘K"
           />
           <div className="flex flex-1 items-center gap-2.5" />
-          <Button onClick={openAdd}>
+          <Button onClick={openAdd} size="lg">
             <Plus className="size-4" />
             Add FAQ
           </Button>
