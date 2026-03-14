@@ -44,7 +44,20 @@ After linking, `npx supabase db push` will apply migrations to the remote databa
 |---------|--------|
 | `auth`  | Managed by Supabase (e.g. `auth.users`). |
 | `authz` | Authorization: roles, permissions, role_permissions, user_roles, organizations, organization_members, helper functions. |
-| `public`| Application data: profiles, resources, and other domain tables. |
+| `public`| Application data: profiles, resources, leads, lead_comments, lead_status_history, contact_attempts. |
+
+## Leads module
+
+The **leads** feature is multi-tenant and soft-delete only. Key pieces:
+
+- **`public.leads`** – Core table: `lead_status` enum, `citext` email, source/campaign/medium/referrer, `organization_id`, `deleted_at`, `updated_by`. Same email/phone can appear in multiple rows.
+- **`public.lead_comments`** – Internal notes/call summaries.
+- **`public.lead_status_history`** – Audit of status changes (trigger-maintained).
+- **`public.contact_attempts`** – Call/email/whatsapp attempts.
+- **Permissions:** `leads.read`, `leads.manage`. Seeded for admin/member/viewer in `seed.sql`.
+- **RLS:** Org-scoped; no delete policy (soft delete only). A trigger blocks hard deletes.
+
+After changing leads schema or RLS, run `supabase db reset` and optionally `supabase/verify-leads.sql` to validate inserts, status history, and soft delete.
 
 ## Migration workflow
 

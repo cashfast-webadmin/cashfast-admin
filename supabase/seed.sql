@@ -19,6 +19,8 @@ values
   ('user.read'),
   ('resource.manage'),
   ('resource.read'),
+  ('leads.manage'),
+  ('leads.read'),
   ('role.manage'),
   ('permission.manage')
 on conflict (name) do nothing;
@@ -39,7 +41,8 @@ where r.name = 'admin'
   and p.name in (
     'organization.manage', 'organization.read',
     'user.manage', 'user.read',
-    'resource.manage', 'resource.read'
+    'resource.manage', 'resource.read',
+    'leads.manage', 'leads.read'
   )
 on conflict (role_id, permission_id) do nothing;
 
@@ -50,7 +53,8 @@ cross join authz.permissions p
 where r.name = 'member'
   and p.name in (
     'organization.read', 'user.read',
-    'resource.manage', 'resource.read'
+    'resource.manage', 'resource.read',
+    'leads.manage', 'leads.read'
   )
 on conflict (role_id, permission_id) do nothing;
 
@@ -60,7 +64,8 @@ from authz.roles r
 cross join authz.permissions p
 where r.name = 'viewer'
   and p.name in (
-    'organization.read', 'user.read', 'resource.read'
+    'organization.read', 'user.read', 'resource.read',
+    'leads.read'
   )
 on conflict (role_id, permission_id) do nothing;
 
