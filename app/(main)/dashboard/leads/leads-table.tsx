@@ -1,28 +1,70 @@
 "use client"
-"use no memo"
 
-import { Download } from "lucide-react"
-
+import { useQuery } from "@tanstack/react-query"
+import { createClient } from "@/lib/supabase/client"
 import { DataTable } from "@/components/data-table/data-table"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
-import { Button } from "@/components/ui/button"
-
 import { useDataTableInstance } from "@/hooks/use-data-table-instance"
+import { LeadDetailPanel } from "./lead-detail-panel"
+import { leadsColumns, type LeadRow } from "./columns"
 
-import { recentLeadsColumns } from "../home/_components/columns.crm"
-import { recentLeadsData } from "../home/_components/crm.config"
+async function fetchLeads(): Promise<LeadRow[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("leads")
+    .select("*")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+  return (data ?? []) as LeadRow[]
+}
 
 export function LeadsTable() {
-  const table = useDataTableInstance({
-    data: recentLeadsData,
-    columns: recentLeadsColumns,
-    getRowId: (row) => row.id.toString(),
+  const { data: leads = [], isLoading, error } = useQuery({
+    queryKey: ["leads"],
+    queryFn: fetchLeads,
   })
+
+  const table = useDataTableInstance({
+    data: leads,
+    columns: leadsColumns,
+    getRowId: (row) => row.id,
+    defaultPageSize: 10,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center rounded-md border border-dashed py-12">
+        <p className="text-muted-foreground text-sm">Loading leads…</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3">
+        <p className="text-destructive text-sm">
+          Failed to load leads. {(error as Error).message}
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs">
-      <DataTable table={table} columns={recentLeadsColumns} />
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-end gap-2">
+          <DataTableViewOptions table={table} />
+        </div>
+        <DataTable
+          table={table}
+          columns={leadsColumns}
+          renderExpandedRow={(row) => <LeadDetailPanel row={row} />}
+        />
+        <DataTablePagination table={table} />
+      </div>
     </div>
   )
 }

@@ -26,6 +26,8 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   dndEnabled?: boolean;
   onReorder?: (newData: TData[]) => void;
+  /** When provided, expanded rows render this content in a full-width cell below the row */
+  renderExpandedRow?: (row: ReturnType<TanStackTable<TData>["getRowModel"]>["rows"][number]) => React.ReactNode;
 }
 
 function renderTableBody<TData, TValue>({
@@ -33,11 +35,13 @@ function renderTableBody<TData, TValue>({
   columns,
   dndEnabled,
   dataIds,
+  renderExpandedRow,
 }: {
   table: TanStackTable<TData>;
   columns: ColumnDef<TData, TValue>[];
   dndEnabled: boolean;
   dataIds: UniqueIdentifier[];
+  renderExpandedRow?: (row: ReturnType<TanStackTable<TData>["getRowModel"]>["rows"][number]) => React.ReactNode;
 }) {
   if (!table.getRowModel().rows.length) {
     return (
@@ -58,11 +62,20 @@ function renderTableBody<TData, TValue>({
     );
   }
   return table.getRowModel().rows.map((row) => (
-    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-      ))}
-    </TableRow>
+    <React.Fragment key={row.id}>
+      <TableRow data-state={row.getIsSelected() && "selected"}>
+        {row.getVisibleCells().map((cell) => (
+          <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+        ))}
+      </TableRow>
+      {renderExpandedRow && row.getIsExpanded() && (
+        <TableRow className="bg-muted/40 hover:bg-muted/40">
+          <TableCell colSpan={columns.length} className="p-0">
+            {renderExpandedRow(row)}
+          </TableCell>
+        </TableRow>
+      )}
+    </React.Fragment>
   ));
 }
 
@@ -71,6 +84,7 @@ export function DataTable<TData, TValue>({
   columns,
   dndEnabled = false,
   onReorder,
+  renderExpandedRow,
 }: DataTableProps<TData, TValue>) {
   const dataIds: UniqueIdentifier[] = table.getRowModel().rows.map((row) => Number(row.id) as UniqueIdentifier);
   const sortableId = React.useId();
@@ -104,7 +118,7 @@ export function DataTable<TData, TValue>({
         ))}
       </TableHeader>
       <TableBody className="**:data-[slot=table-cell]:first:w-8">
-        {renderTableBody({ table, columns, dndEnabled, dataIds })}
+        {renderTableBody({ table, columns, dndEnabled, dataIds, renderExpandedRow })}
       </TableBody>
     </Table>
   );
