@@ -29,6 +29,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import type { NavGroup, NavMainItem } from "@/navigation/sidebar/sidebar-items"
+import { cn } from "@/lib/utils"
 
 interface NavMainProps {
   readonly items: readonly NavGroup[]
@@ -81,8 +82,24 @@ const NavItemExpanded = ({
                 href={item.url}
                 target={item.newTab ? "_blank" : undefined}
               >
-                {item.icon && <item.icon />}
-                <span>{item.title}</span>
+                {item.icon && (
+                  <item.icon
+                    className={cn(
+                      isActive(item.url)
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    )}
+                  />
+                )}
+                <span
+                  className={cn(
+                    isActive(item.url)
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {item.title}
+                </span>
                 {item.comingSoon && <IsComingSoon />}
               </Link>
             </SidebarMenuButton>
