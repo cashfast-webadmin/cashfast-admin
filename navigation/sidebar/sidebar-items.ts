@@ -1,4 +1,10 @@
-import { HelpCircle, LayoutDashboard, type LucideIcon, Zap } from "lucide-react"
+import {
+  HelpCircle,
+  LayoutDashboard,
+  NotebookPen,
+  type LucideIcon,
+  Zap,
+} from "lucide-react"
 
 export interface NavSubItem {
   title: string
@@ -50,6 +56,11 @@ export const sidebarItems: NavGroup[] = [
         title: "FAQ",
         url: "/dashboard/faq",
         icon: HelpCircle,
+      },
+      {
+        title: "Blog",
+        url: "/dashboard/blog",
+        icon: NotebookPen,
       },
     ],
   },

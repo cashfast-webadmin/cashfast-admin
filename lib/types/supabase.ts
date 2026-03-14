@@ -40,16 +40,19 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          slug: string
         }
         Insert: {
           created_at?: string | null
           id?: string
           name: string
+          slug: string
         }
         Update: {
           created_at?: string | null
           id?: string
           name?: string
+          slug?: string
         }
         Relationships: []
       }
@@ -141,6 +144,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_org: { Args: never; Returns: string }
       has_permission: { Args: { permission_name: string }; Returns: boolean }
       has_role: { Args: { role_name: string }; Returns: boolean }
       is_authenticated: { Args: never; Returns: boolean }
@@ -183,6 +187,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_post_tags: {
+        Row: {
+          blog_id: string
+          created_at: string
+          tag_id: string
+        }
+        Insert: {
+          blog_id: string
+          created_at?: string
+          tag_id: string
+        }
+        Update: {
+          blog_id?: string
+          created_at?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_tags_blog_id_fkey"
+            columns: ["blog_id"]
+            isOneToOne: false
+            referencedRelation: "blogs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_post_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "blog_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      blogs: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          excerpt: string | null
+          featured_image: string | null
+          id: string
+          organization_id: string
+          published_at: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          status: Database["public"]["Enums"]["blog_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          excerpt?: string | null
+          featured_image?: string | null
+          id?: string
+          organization_id: string
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["blog_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          excerpt?: string | null
+          featured_image?: string | null
+          id?: string
+          organization_id?: string
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["blog_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contact_attempts: {
         Row: {
           attempt_type: string
@@ -220,6 +335,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      faqs: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          question: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          question: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          question?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       lead_comments: {
         Row: {
@@ -300,7 +442,9 @@ export type Database = {
           customer_query: string | null
           deleted_at: string | null
           email: string | null
+          fingerprint: string | null
           id: string
+          ip_address: unknown
           last_contacted_at: string | null
           lead_source_details: Json
           loan_amount: number | null
@@ -317,6 +461,7 @@ export type Database = {
           status: Database["public"]["Enums"]["lead_status"]
           updated_at: string
           updated_by: string | null
+          user_agent: string | null
           work_profile: string
         }
         Insert: {
@@ -327,7 +472,9 @@ export type Database = {
           customer_query?: string | null
           deleted_at?: string | null
           email?: string | null
+          fingerprint?: string | null
           id?: string
+          ip_address?: unknown
           last_contacted_at?: string | null
           lead_source_details?: Json
           loan_amount?: number | null
@@ -336,7 +483,7 @@ export type Database = {
           monthly_salary?: number | null
           name: string
           next_follow_up_at?: string | null
-          organization_id: string
+          organization_id?: string
           phone?: string | null
           priority?: string
           referrer?: string | null
@@ -344,6 +491,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
           updated_by?: string | null
+          user_agent?: string | null
           work_profile: string
         }
         Update: {
@@ -354,7 +502,9 @@ export type Database = {
           customer_query?: string | null
           deleted_at?: string | null
           email?: string | null
+          fingerprint?: string | null
           id?: string
+          ip_address?: unknown
           last_contacted_at?: string | null
           lead_source_details?: Json
           loan_amount?: number | null
@@ -371,6 +521,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
           updated_by?: string | null
+          user_agent?: string | null
           work_profile?: string
         }
         Relationships: []
@@ -423,33 +574,6 @@ export type Database = {
         }
         Relationships: []
       }
-      faqs: {
-        Row: {
-          id: string
-          question: string
-          answer: string
-          sort_order: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          question: string
-          answer: string
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          question?: string
-          answer?: string
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
@@ -458,10 +582,24 @@ export type Database = {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       get_profiles_by_role: {
         Args: { role_name: string }
-        Returns: { id: string; full_name: string | null; email: string | null; avatar_url: string | null; created_at: string | null }[]
+        Returns: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
+      submit_lead: { Args: { payload: Json }; Returns: string }
     }
     Enums: {
+      blog_status: "draft" | "published" | "archived"
       lead_status:
         | "new"
         | "contacted"
@@ -1138,6 +1276,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      blog_status: ["draft", "published", "archived"],
       lead_status: [
         "new",
         "contacted",
@@ -1156,3 +1295,4 @@ export const Constants = {
     },
   },
 } as const
+
