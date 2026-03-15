@@ -210,13 +210,15 @@ const handler = async (req: Request): Promise<Response> => {
       headers: { "Content-Type": "application/json" },
     })
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error("[process-notification] failed", { id, channel: record.channel, error: message })
     const nextRetry = retryCount + 1
     await markFailed(id, nextRetry)
     return new Response(
       JSON.stringify({
         ok: false,
         id,
-        error: err instanceof Error ? err.message : String(err),
+        error: message,
         retry_count: nextRetry,
         status: nextRetry >= 3 ? "failed" : "pending",
       }),
