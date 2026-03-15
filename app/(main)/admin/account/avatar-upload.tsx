@@ -11,6 +11,7 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { CircleAlertIcon, UserIcon, XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { forwardRef, useImperativeHandle } from "react"
@@ -178,7 +179,8 @@ export const AvatarUpload = forwardRef<AvatarUploadHandle, AvatarUploadProps>(
             onClick={() => onSave(currentFile.file as File)}
             disabled={isSaving}
           >
-            {isSaving ? "Uploading…" : "Save photo"}
+            {isSaving && <Spinner className="mr-2 size-4" />}
+            Save photo
           </Button>
           <button
             type="button"

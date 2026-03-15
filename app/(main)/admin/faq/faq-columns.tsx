@@ -1,7 +1,7 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { EllipsisVertical, Pencil, Trash2 } from "lucide-react"
+import { Edit2, EllipsisVertical, Link2, Pencil, Trash2 } from "lucide-react"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { Button } from "@/components/ui/button"
@@ -52,9 +52,19 @@ export function getFaqColumns({
         />
       ),
       cell: ({ row }) => (
-        <span className="line-clamp-2 text-xs font-medium">
-          {row.original.question}
-        </span>
+        <Button
+          variant="ghost"
+          className="group h-auto min-h-0 w-full justify-start gap-1.5 p-0 text-left font-medium hover:bg-transparent hover:text-primary hover:underline hover:underline-offset-2"
+          onClick={() => onEdit(row.original)}
+        >
+          <span className="line-clamp-2 flex-1 text-xs font-medium">
+            {row.original.question}
+          </span>
+          <Edit2
+            className="size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-70"
+            aria-hidden
+          />
+        </Button>
       ),
       enableSorting: true,
       minSize: 180,

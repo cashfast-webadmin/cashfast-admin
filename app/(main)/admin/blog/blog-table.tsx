@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { DataTable } from "@/components/data-table/data-table"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Empty,
   EmptyContent,
@@ -47,7 +48,6 @@ export function BlogTable() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editBlog, setEditBlog] = useState<BlogRow | null>(null)
   const [deleteBlog, setDeleteBlog] = useState<BlogRow | null>(null)
-  const [pendingPublishId, setPendingPublishId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
   const {
@@ -84,29 +84,6 @@ export function BlogTable() {
     },
   })
 
-  const publishMutation = useMutation({
-    mutationFn: async ({ id, publish }: { id: string; publish: boolean }) => {
-      setPendingPublishId(id)
-      if (publish) {
-        await blogsApi.publishBlog(id)
-      } else {
-        await blogsApi.unpublishBlog(id)
-      }
-    },
-    onSuccess: (_value, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["blogs", "list"] })
-      toast.success(
-        variables.publish ? "Blog post published" : "Blog post moved to draft"
-      )
-    },
-    onError: (err) => {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update publish state"
-      )
-    },
-    onSettled: () => setPendingPublishId(null),
-  })
-
   const openAdd = useCallback(() => {
     setEditBlog(null)
     setDrawerOpen(true)
@@ -124,15 +101,10 @@ export function BlogTable() {
   const columns = useMemo(
     () =>
       getBlogColumns({
-        pendingPublishId,
         onEdit: openEdit,
         onDelete: setDeleteBlog,
-        onPublish: (blog) =>
-          publishMutation.mutate({ id: blog.id, publish: true }),
-        onUnpublish: (blog) =>
-          publishMutation.mutate({ id: blog.id, publish: false }),
       }),
-    [openEdit, pendingPublishId, publishMutation]
+    [openEdit]
   )
 
   const table = useDataTableInstance({
@@ -254,8 +226,12 @@ export function BlogTable() {
               onClick={() => deleteBlog && deleteMutation.mutate(deleteBlog.id)}
               variant="destructive"
               size="lg"
+              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              {deleteMutation.isPending && (
+                <Spinner className="mr-2 size-4" />
+              )}
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

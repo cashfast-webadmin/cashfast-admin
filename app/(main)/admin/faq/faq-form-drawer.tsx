@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { faqsApi, faqsQueryKeys, type FaqRow } from "@/lib/api/faqs"
 
 const formSchema = z.object({
@@ -138,7 +139,8 @@ export function FaqFormDrawer({
               form="faq-form"
               disabled={isPending}
             >
-              {isPending ? "Saving…" : isEditing ? "Update" : "Add"}
+              {isPending && <Spinner className="mr-2 size-4" />}
+              {isEditing ? "Update" : "Add"}
             </Button>
           </div>
         </SheetHeader>

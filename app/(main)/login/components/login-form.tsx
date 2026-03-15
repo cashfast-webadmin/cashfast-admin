@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+
+import { Spinner } from "@/components/ui/spinner"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
@@ -100,7 +102,8 @@ export function LoginForm() {
         />
 
         <Button className="w-full" type="submit" disabled={signInMutation.isPending}>
-          {signInMutation.isPending ? "Signing in…" : "Login"}
+          {signInMutation.isPending && <Spinner className="mr-2 size-4" />}
+          Login
         </Button>
       </form>
     </Form>

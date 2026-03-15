@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { DataTable } from "@/components/data-table/data-table"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Empty,
   EmptyContent,
@@ -211,8 +212,12 @@ export function FaqTable() {
               variant="destructive"
               size="lg"
               onClick={() => deleteFaq && deleteMutation.mutate(deleteFaq.id)}
+              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              {deleteMutation.isPending && (
+                <Spinner className="mr-2 size-4" />
+              )}
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
