@@ -51,6 +51,10 @@ export type GetLeadsParams = {
   sortOrder?: "asc" | "desc"
   page?: number
   pageSize?: number
+  /** ISO date string; filter leads created on or after this time. */
+  created_at_after?: string
+  /** ISO date string; filter leads created on or before this time. */
+  created_at_before?: string
 }
 
 /** Result of server-side getLeads: one page of rows + total count. */
@@ -113,6 +117,12 @@ async function getLeads(params: GetLeadsParams = {}): Promise<GetLeadsResult> {
     query = query.or(
       `name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`
     )
+  }
+  if (params.created_at_after) {
+    query = query.gte("created_at", params.created_at_after)
+  }
+  if (params.created_at_before) {
+    query = query.lte("created_at", params.created_at_before)
   }
 
   query = query.order(sortBy, { ascending })
