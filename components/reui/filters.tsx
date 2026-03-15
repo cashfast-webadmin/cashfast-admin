@@ -947,7 +947,7 @@ function SelectOptionsPopover<T = unknown>({
     >
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size={context.size}>
-          <div className="flex items-center gap-1.5">
+          <div className={cn("flex items-center gap-1.5", {"text-muted-foreground": selectedOptions.length === 0 })}>
             {field.customValueRenderer ? (
               field.customValueRenderer(values, field.options || [])
             ) : (

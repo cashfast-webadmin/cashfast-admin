@@ -290,11 +290,11 @@ export const leadsColumns: ColumnDef<LeadRow>[] = [
           aria-label={row.getIsExpanded() ? "Collapse row" : "Expand row"}
         >
           {row.index + 1}
-          {/* {row.getIsExpanded() ? (
+          {row.getIsExpanded() ? (
             <ChevronDown className="size-3.5" />
           ) : (
             <ChevronRight className="size-3.5" />
-          )} */}
+          )}
         </Button>
       </span>
     ),
