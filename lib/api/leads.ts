@@ -55,6 +55,8 @@ export type GetLeadsParams = {
   created_at_after?: string
   /** ISO date string; filter leads created on or before this time. */
   created_at_before?: string
+  /** Filter by assignee: user uuid, or "unassigned" for leads with no assignee. */
+  assigned_to?: string | "unassigned"
 }
 
 /** Result of server-side getLeads: one page of rows + total count. */
@@ -123,6 +125,13 @@ async function getLeads(params: GetLeadsParams = {}): Promise<GetLeadsResult> {
   }
   if (params.created_at_before) {
     query = query.lte("created_at", params.created_at_before)
+  }
+  if (params.assigned_to !== undefined) {
+    if (params.assigned_to === "unassigned") {
+      query = query.is("assigned_to", null)
+    } else {
+      query = query.eq("assigned_to", params.assigned_to)
+    }
   }
 
   query = query.order(sortBy, { ascending })

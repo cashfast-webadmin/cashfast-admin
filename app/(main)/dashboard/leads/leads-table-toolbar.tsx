@@ -1,6 +1,8 @@
 "use client"
 
-import { FilterIcon, FunnelXIcon } from "lucide-react"
+import { useMemo } from "react"
+import { FilterIcon, FunnelXIcon, UserIcon } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
 import type { Table } from "@tanstack/react-table"
 
 import {
@@ -12,10 +14,12 @@ import { DataTableViewOptions } from "@/components/data-table/data-table-view-op
 import { Button } from "@/components/ui/button"
 import { SearchInput } from "@/components/ui/search-input"
 import { StatusDot } from "@/components/ui/status-dot"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { leadPriorityOptions, leadStatusOptions } from "@/lib/api/leads"
 import type { LeadRow } from "@/lib/api/leads"
+import { profilesApi, profilesQueryKeys } from "@/lib/api/profiles"
 
-const leadFilterFields: FilterFieldGroup<string>[] = [
+const baseLeadFilterFields: FilterFieldGroup<string>[] = [
   {
     group: "Leads",
     fields: [
@@ -58,6 +62,9 @@ interface LeadsTableToolbarProps {
   handleFiltersChange: (filters: Filter<string>[]) => void
   clearFilters: () => void
   hasActiveFilters: boolean
+  assignedView: "all" | "mine"
+  setAssignedView: (view: "all" | "mine") => void
+  currentUserId: string | null
 }
 
 export function LeadsTableToolbar({
@@ -69,9 +76,60 @@ export function LeadsTableToolbar({
   handleFiltersChange,
   clearFilters,
   hasActiveFilters,
+  assignedView,
+  setAssignedView,
+  currentUserId,
 }: LeadsTableToolbarProps) {
+  const { data: profiles = [] } = useQuery({
+    queryKey: profilesQueryKeys.listByRole("lead_executive"),
+    queryFn: () => profilesApi.getProfilesByRole("lead_executive"),
+  })
+
+  const leadFilterFields: FilterFieldGroup<string>[] = useMemo(() => {
+    const assigneeOptions = [
+      {
+        value: "unassigned",
+        label: "Unassigned",
+        icon: <UserIcon className="size-3" />,
+      },
+      ...profiles.map((p) => ({
+        value: p.id,
+        label: p.full_name || p.email || p.id,
+        icon: <UserIcon className="size-3" />,
+      })),
+    ]
+    return [
+      ...baseLeadFilterFields,
+      {
+        group: "Assignment",
+        fields: [
+          {
+            key: "assigned_to",
+            label: "Assigned to",
+            type: "select",
+            className: "w-[220px]",
+            hideOperator: true,
+            options: assigneeOptions.map((o) => ({
+              ...o,
+              label: o.value === currentUserId ? "Me" : o.label,
+            })),
+          },
+        ],
+      },
+    ]
+  }, [profiles, currentUserId])
+
   return (
-    <div className="flex shrink-0 flex-col border-b bg-background px-4 py-2">
+    <div className="flex shrink-0 flex-col gap-2 border-b bg-background px-4 py-2">
+      <Tabs
+        value={assignedView}
+        onValueChange={(v) => setAssignedView(v as "all" | "mine")}
+      >
+        <TabsList variant="default" className="h-8">
+          <TabsTrigger value="all">All Leads</TabsTrigger>
+          <TabsTrigger value="mine">My Leads</TabsTrigger>
+        </TabsList>
+      </Tabs>
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold tracking-tight">Leads</h2>

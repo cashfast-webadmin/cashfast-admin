@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, useRef } from "react"
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { DataTable } from "@/components/data-table/data-table"
+import { authApi, authQueryKeys } from "@/lib/api/auth"
 import {
   Empty,
   EmptyContent,
@@ -31,11 +32,32 @@ export function LeadsTable() {
     sortOrder,
     setSortBy,
     setSortOrder,
+    assignedView,
+    setAssignedView,
+    assignedTo,
     filters,
     handleFiltersChange,
     clearFilters,
     hasActiveFilters,
   } = useLeadsTableState()
+
+  const { data: currentUser } = useQuery({
+    queryKey: authQueryKeys.user,
+    queryFn: () => authApi.getUser(),
+  })
+
+  const paramsWithAssignee = useMemo(
+    () => ({
+      ...params,
+      assigned_to:
+        assignedView === "mine"
+          ? currentUser?.id
+          : assignedTo
+            ? (assignedTo as string | "unassigned")
+            : undefined,
+    }),
+    [params, assignedView, assignedTo, currentUser?.id]
+  )
 
   const {
     data,
@@ -46,10 +68,13 @@ export function LeadsTable() {
     fetchNextPage,
     error,
   } = useInfiniteQuery({
-    queryKey: leadsQueryKeys.list({ ...params, pageSize: INFINITE_PAGE_SIZE }),
+    queryKey: leadsQueryKeys.list({
+      ...paramsWithAssignee,
+      pageSize: INFINITE_PAGE_SIZE,
+    }),
     queryFn: ({ pageParam }) =>
       leadsApi.getLeads({
-        ...params,
+        ...paramsWithAssignee,
         page: pageParam,
         pageSize: INFINITE_PAGE_SIZE,
       }),
@@ -172,6 +197,9 @@ export function LeadsTable() {
         handleFiltersChange={handleFiltersChange}
         clearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
+        assignedView={assignedView}
+        setAssignedView={setAssignedView}
+        currentUserId={currentUser?.id ?? null}
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto">

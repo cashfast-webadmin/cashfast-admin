@@ -4,6 +4,7 @@ import {
   NotebookPen,
   type LucideIcon,
   Zap,
+  Notebook,
 } from "lucide-react"
 
 export interface NavSubItem {
@@ -37,30 +38,30 @@ export const sidebarItems: NavGroup[] = [
     label: "Dashboards",
     items: [
       {
-        title: "Home",
+        title: "Overview",
         url: "/dashboard/home",
         icon: LayoutDashboard,
       },
-    ],
-  },
-  {
-    id: 2,
-    label: "Pages",
-    items: [
       {
         title: "Leads",
         url: "/dashboard/leads",
         icon: Zap,
       },
+    ],
+  },
+  {
+    id: 2,
+    label: "Admin",
+    items: [
       {
         title: "FAQ",
         url: "/dashboard/faq",
         icon: HelpCircle,
       },
       {
-        title: "Blog",
+        title: "Blogs",
         url: "/dashboard/blog",
-        icon: NotebookPen,
+        icon: Notebook,
       },
     ],
   },

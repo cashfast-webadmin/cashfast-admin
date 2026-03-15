@@ -21,6 +21,10 @@ const sortByParser = parseAsStringLiteral([
 const sortOrderParser = parseAsStringLiteral(["asc", "desc"]).withDefault(
   "desc"
 )
+const assignedViewParser = parseAsStringLiteral(["all", "mine"]).withDefault(
+  "all"
+)
+const assignedToParser = parseAsString.withDefault("")
 
 export {
   statusParser,
@@ -28,6 +32,8 @@ export {
   searchParser,
   sortByParser,
   sortOrderParser,
+  assignedViewParser,
+  assignedToParser,
 }
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -38,6 +44,14 @@ export function useLeadsTableState() {
   const [search, setSearch] = useQueryState("search", searchParser)
   const [sortBy, setSortBy] = useQueryState("sortBy", sortByParser)
   const [sortOrder, setSortOrder] = useQueryState("sortOrder", sortOrderParser)
+  const [assignedView, setAssignedView] = useQueryState(
+    "assignedView",
+    assignedViewParser
+  )
+  const [assignedTo, setAssignedTo] = useQueryState(
+    "assignedTo",
+    assignedToParser
+  )
 
   const [searchInputValue, setSearchInputValue] = useState("")
 
@@ -76,13 +90,17 @@ export function useLeadsTableState() {
   )
 
   const hasActiveFilters =
-    status.length > 0 || priority.length > 0 || (search?.length ?? 0) > 0
+    status.length > 0 ||
+    priority.length > 0 ||
+    (search?.length ?? 0) > 0 ||
+    assignedTo.length > 0
 
   const clearFilters = useCallback(() => {
     setStatus(null)
     setPriority(null)
     setSearch(null)
-  }, [setStatus, setPriority, setSearch])
+    setAssignedTo(null)
+  }, [setStatus, setPriority, setSearch, setAssignedTo])
 
   /** Filter keys that are always shown in the toolbar (with or without values). */
   const defaultFilterFields = useMemo(
@@ -97,6 +115,11 @@ export function useLeadsTableState() {
         field: "priority" as const,
         operator: "is_any_of" as const,
       },
+      {
+        id: "assigned_to",
+        field: "assigned_to" as const,
+        operator: "is" as const,
+      },
     ],
     []
   )
@@ -106,9 +129,16 @@ export function useLeadsTableState() {
       id,
       field,
       operator,
-      values: field === "status" ? status : priority,
+      values:
+        field === "status"
+          ? status
+          : field === "priority"
+            ? priority
+            : assignedTo
+              ? [assignedTo]
+              : [],
     }))
-  }, [defaultFilterFields, status, priority])
+  }, [defaultFilterFields, status, priority, assignedTo])
 
   const handleFiltersChange = useCallback(
     (newFilters: Filter<string>[]) => {
@@ -118,8 +148,11 @@ export function useLeadsTableState() {
       const priorityFilter = newFilters.find((f) => f.field === "priority")
       const nextPriority = priorityFilter?.values ?? []
       setPriority(nextPriority.length > 0 ? nextPriority : null)
+      const assignedToFilter = newFilters.find((f) => f.field === "assigned_to")
+      const nextAssignedTo = assignedToFilter?.values?.[0] ?? ""
+      setAssignedTo(nextAssignedTo || null)
     },
-    [setStatus, setPriority]
+    [setStatus, setPriority, setAssignedTo]
   )
 
   return {
@@ -135,6 +168,10 @@ export function useLeadsTableState() {
     setSortBy,
     sortOrder,
     setSortOrder,
+    assignedView,
+    setAssignedView,
+    assignedTo,
+    setAssignedTo,
     params,
     hasActiveFilters,
     clearFilters,
