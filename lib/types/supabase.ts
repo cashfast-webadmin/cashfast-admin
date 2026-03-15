@@ -1,3 +1,4 @@
+Connecting to db 5432
 export type Json =
   | string
   | number
@@ -462,6 +463,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           user_agent: string | null
+          whatsapp_opt_in: boolean
           work_profile: string
         }
         Insert: {
@@ -492,6 +494,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           user_agent?: string | null
+          whatsapp_opt_in?: boolean
           work_profile: string
         }
         Update: {
@@ -522,7 +525,71 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           user_agent?: string | null
+          whatsapp_opt_in?: boolean
           work_profile?: string
+        }
+        Relationships: []
+      }
+      notification_templates: {
+        Row: {
+          body: string | null
+          channel: string
+          event_type: string
+          id: string
+          subject: string | null
+        }
+        Insert: {
+          body?: string | null
+          channel: string
+          event_type: string
+          id?: string
+          subject?: string | null
+        }
+        Update: {
+          body?: string | null
+          channel?: string
+          event_type?: string
+          id?: string
+          subject?: string | null
+        }
+        Relationships: []
+      }
+      notifications_queue: {
+        Row: {
+          channel: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json | null
+          processed_at: string | null
+          recipient_email: string | null
+          recipient_phone: string | null
+          retry_count: number
+          status: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          retry_count?: number
+          status?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          retry_count?: number
+          status?: string
         }
         Relationships: []
       }
@@ -1296,3 +1363,5 @@ export const Constants = {
   },
 } as const
 
+A new version of Supabase CLI is available: v2.78.1 (currently installed v2.75.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

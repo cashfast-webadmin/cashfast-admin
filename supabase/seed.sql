@@ -26,7 +26,8 @@ values
   ('blogs.manage'),
   ('blogs.read'),
   ('role.manage'),
-  ('permission.manage')
+  ('permission.manage'),
+  ('notification_templates.manage')
 on conflict (name) do nothing;
 
 -- Role-permission mappings (idempotent: insert only if pair doesn't exist)
@@ -48,7 +49,8 @@ where r.name = 'admin'
     'resource.manage', 'resource.read',
     'leads.manage', 'leads.read',
     'faqs.manage',
-    'blogs.manage', 'blogs.read'
+    'blogs.manage', 'blogs.read',
+    'notification_templates.manage'
   )
 on conflict (role_id, permission_id) do nothing;
 
@@ -62,7 +64,8 @@ where r.name = 'member'
     'resource.manage', 'resource.read',
     'leads.manage', 'leads.read',
     'faqs.manage',
-    'blogs.manage', 'blogs.read'
+    'blogs.manage', 'blogs.read',
+    'notification_templates.manage'
   )
 on conflict (role_id, permission_id) do nothing;
 
