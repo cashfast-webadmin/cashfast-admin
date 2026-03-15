@@ -36,12 +36,18 @@ function getAutoBreadcrumbs(pathname: string): BreadcrumbItemType[] {
   const segments = pathname.split("/").filter(Boolean)
   const items: BreadcrumbItemType[] = []
 
-  if (segments[0] === "dashboard") {
-    items.push({ label: "Dashboard", href: "/dashboard/home" })
+  const firstSegment = segments[0]
+  const isDashboard = firstSegment === "dashboard"
+  const isAdmin = firstSegment === "admin"
+  const homeHref = "/dashboard/home"
+
+  if (isDashboard || isAdmin) {
+    items.push({ label: "Dashboard", href: homeHref })
     segments.shift()
   }
 
-  let path = "/dashboard"
+  const basePath = isDashboard ? "/dashboard" : isAdmin ? "/admin" : ""
+  let path = basePath
   for (let i = 0; i < segments.length; i++) {
     path += `/${segments[i]}`
     const isLast = i === segments.length - 1

@@ -108,7 +108,7 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/account">
+                <Link href="/admin/account">
                   <CircleUser />
                   Account
                 </Link>

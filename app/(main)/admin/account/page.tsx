@@ -8,7 +8,7 @@ import { Calendar, Clock, Shield, Mail } from "lucide-react"
 import {
   AvatarUpload,
   type AvatarUploadHandle,
-} from "@/app/(main)/dashboard/account/avatar-upload"
+} from "@/app/(main)/admin/account/avatar-upload"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { authApi, authQueryKeys } from "@/lib/api/auth"

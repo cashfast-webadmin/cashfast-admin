@@ -55,12 +55,12 @@ export const sidebarItems: NavGroup[] = [
     items: [
       {
         title: "FAQ",
-        url: "/dashboard/faq",
+        url: "/admin/faq",
         icon: HelpCircle,
       },
       {
         title: "Blogs",
-        url: "/dashboard/blog",
+        url: "/admin/blog",
         icon: Notebook,
       },
     ],

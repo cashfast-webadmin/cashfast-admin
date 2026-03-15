@@ -73,7 +73,7 @@ export function AccountSwitcher() {
         <div className="space-y-1 p-1">
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/dashboard/account">
+            <Link href="/admin/account">
               <BadgeCheck />
               Account
             </Link>

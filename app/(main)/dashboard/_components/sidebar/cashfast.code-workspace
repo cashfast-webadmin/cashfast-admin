@@ -1,11 +1,12 @@
 {
-	"folders": [
-		{
-			"path": "../../../../../../cashfast-website"
-		},
-		{
-			"path": "../../../../.."
-		}
-	],
-	"settings": {}
+  "folders": [
+    {
+      "name": "cashfast-website",
+      "path": "../../../../../../cashfast-website",
+    },
+    {
+      "name": "cashfast-admin",
+      "path": "../../../../..",
+    },
+  ],
 }
