@@ -1,7 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useRef } from "react"
-import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query"
 import { DataTable } from "@/components/data-table/data-table"
 import { authApi, authQueryKeys } from "@/lib/api/auth"
 import {
@@ -9,6 +13,7 @@ import {
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
 import { TableCell, TableRow } from "@/components/ui/table"
@@ -20,6 +25,7 @@ import { leadsApi, leadsQueryKeys } from "@/lib/api/leads"
 import { LeadDetailPanel } from "./lead-detail-panel"
 import { leadsColumns } from "./columns"
 import { LeadsTableToolbar } from "./leads-table-toolbar"
+import { FolderCodeIcon } from "lucide-react"
 
 const INFINITE_PAGE_SIZE = 20
 
@@ -117,9 +123,12 @@ export function LeadsTable() {
   ) : leads.length === 0 ? (
     <TableRow>
       <TableCell colSpan={leadsColumns.length} className="p-0">
-        <div className="flex items-center justify-center p-8">
-          <Empty className="bg-muted">
+        <div className="flex items-center justify-center p-0">
+          <Empty>
             <EmptyHeader>
+              <EmptyMedia>
+                <FolderCodeIcon className="size-6" />
+              </EmptyMedia>
               <EmptyTitle>
                 {hasActiveFilters ? "No results found" : "No leads yet"}
               </EmptyTitle>

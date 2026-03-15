@@ -42,7 +42,7 @@ function filterBlogsBySearch(blogs: BlogRow[], search: string): BlogRow[] {
   )
 }
 
-export function BlogList() {
+export function BlogTable() {
   const queryClient = useQueryClient()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editBlog, setEditBlog] = useState<BlogRow | null>(null)
@@ -208,7 +208,7 @@ export function BlogList() {
           <div className="flex flex-1 items-center gap-2.5" />
           <Button onClick={openAdd} size="lg">
             <Plus className="size-4" />
-            Add Post
+            Add Blog Post
           </Button>
         </div>
       </div>
@@ -249,10 +249,11 @@ export function BlogList() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel size="lg">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteBlog && deleteMutation.mutate(deleteBlog.id)}
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              variant="destructive"
+              size="lg"
             >
               {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>

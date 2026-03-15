@@ -42,7 +42,7 @@ function filterFaqsBySearch(faqs: FaqRow[], search: string): FaqRow[] {
   )
 }
 
-export function FaqList() {
+export function FaqTable() {
   const queryClient = useQueryClient()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editFaq, setEditFaq] = useState<FaqRow | null>(null)
@@ -206,10 +206,11 @@ export function FaqList() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel size="lg">Cancel</AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
+              size="lg"
               onClick={() => deleteFaq && deleteMutation.mutate(deleteFaq.id)}
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>

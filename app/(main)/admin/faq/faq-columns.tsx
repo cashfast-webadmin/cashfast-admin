@@ -34,7 +34,7 @@ export function getFaqColumns({
         </span>
       ),
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground tabular-nums ps-2">
+        <span className="ps-2 text-xs text-muted-foreground tabular-nums">
           {row.index + 1}
         </span>
       ),
@@ -83,7 +83,7 @@ export function getFaqColumns({
         />
       ),
       cell: ({ row }) => (
-        <span className="tabular-nums text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground tabular-nums">
           {row.original.sort_order}
         </span>
       ),
@@ -97,12 +97,7 @@ export function getFaqColumns({
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 data-[state=open]:bg-muted"
-                aria-label="Open menu"
-              >
+              <Button variant="ghost" size="icon" aria-label="Open menu">
                 <EllipsisVertical className="size-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -112,7 +107,7 @@ export function getFaqColumns({
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
+                variant="destructive"
                 onClick={() => onDelete(faq)}
               >
                 <Trash2 className="size-4" />

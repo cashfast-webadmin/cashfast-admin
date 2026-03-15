@@ -48,7 +48,7 @@ export function getBlogColumns({
         </span>
       ),
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground tabular-nums ps-2">
+        <span className="ps-2 text-xs text-muted-foreground tabular-nums">
           {row.index + 1}
         </span>
       ),
@@ -134,7 +134,9 @@ export function getBlogColumns({
     },
     {
       id: "publish",
-      header: () => <span className="text-xs text-muted-foreground">Publish</span>,
+      header: () => (
+        <span className="text-xs text-muted-foreground">Publish</span>
+      ),
       cell: ({ row }) => (
         <BlogPublishActions
           blog={row.original}
@@ -168,8 +170,8 @@ export function getBlogColumns({
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
                 onClick={() => onDelete(blog)}
+                variant="destructive"
               >
                 <Trash2 className="size-4" />
                 Delete

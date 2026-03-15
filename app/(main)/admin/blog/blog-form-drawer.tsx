@@ -5,7 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   CircleAlertIcon,
   CloudUploadIcon,
+  Eye,
   ImageIcon,
+  Maximize2,
+  Minimize2,
   UploadIcon,
   XIcon,
 } from "lucide-react"
@@ -14,11 +17,13 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/reui/alert"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -36,12 +41,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Textarea } from "@/components/ui/textarea"
 import {
-  useFileUpload,
-  type FileWithPreview,
-} from "@/hooks/use-file-upload"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { Textarea } from "@/components/ui/textarea"
+import { useFileUpload, type FileWithPreview } from "@/hooks/use-file-upload"
 import { authApi, authQueryKeys } from "@/lib/api/auth"
 import {
   blogsApi,
@@ -80,6 +87,115 @@ const STATUS_OPTIONS: { label: string; value: BlogStatus }[] = [
 ]
 const EMPTY_TAGS: { id: string; name: string; slug: string }[] = []
 
+/** Minimal markdown-to-HTML for preview (headings, bold, links, paragraphs). */
+function simpleMarkdownToHtml(md: string): string {
+  if (!md?.trim()) return ""
+  const lines = md.split(/\r?\n/)
+  const out: string[] = []
+  let inParagraph = false
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const h1 = line.match(/^# (.*)$/)
+    const h2 = line.match(/^## (.*)$/)
+    const h3 = line.match(/^### (.*)$/)
+    if (h1) {
+      if (inParagraph) out.push("</p>")
+      out.push(`<h1 class="text-2xl font-bold mt-4 mb-2">${escapeHtml(h1[1])}</h1>`)
+      inParagraph = false
+    } else if (h2) {
+      if (inParagraph) out.push("</p>")
+      out.push(`<h2 class="text-xl font-semibold mt-4 mb-2">${escapeHtml(h2[1])}</h2>`)
+      inParagraph = false
+    } else if (h3) {
+      if (inParagraph) out.push("</p>")
+      out.push(`<h3 class="text-lg font-semibold mt-3 mb-1">${escapeHtml(h3[1])}</h3>`)
+      inParagraph = false
+    } else if (line.trim() === "") {
+      if (inParagraph) out.push("</p>")
+      inParagraph = false
+    } else {
+      if (!inParagraph) out.push("<p class='mb-2'>")
+      inParagraph = true
+      out.push(escapeHtml(line) + "\n")
+    }
+  }
+  if (inParagraph) out.push("</p>")
+  const raw = out.join("")
+  return raw
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href='$2' class='underline text-primary' target='_blank' rel='noopener'>$1</a>")
+}
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+}
+
+function BlogPreviewContent({
+  title,
+  featuredImage,
+  excerpt,
+  content,
+  tags,
+}: {
+  title: string
+  featuredImage: string | undefined
+  excerpt: string | undefined
+  content: string
+  tags: string
+}) {
+  const tagList = tags
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+  return (
+    <article className="space-y-4">
+      {title ? (
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+          {title}
+        </h1>
+      ) : (
+        <p className="text-muted-foreground text-sm italic">No title</p>
+      )}
+      {featuredImage && (
+        <div className="aspect-[16/10] w-full overflow-hidden rounded-md border">
+          <img
+            src={featuredImage}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
+      {excerpt && (
+        <p className="text-muted-foreground text-base leading-relaxed">
+          {excerpt}
+        </p>
+      )}
+      <div
+        className="prose prose-sm dark:prose-invert max-w-none [&_p]:mb-2 [&_ul]:list-disc [&_ol]:list-decimal [&_pre]:rounded [&_pre]:bg-muted [&_pre]:p-3"
+        dangerouslySetInnerHTML={{
+          __html: simpleMarkdownToHtml(content || ""),
+        }}
+      />
+      {tagList.length > 0 && (
+        <div className="flex flex-wrap gap-2 border-t pt-4">
+          {tagList.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </article>
+  )
+}
+
 export function BlogFormDrawer({
   open,
   onOpenChange,
@@ -91,6 +207,8 @@ export function BlogFormDrawer({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [imageLoading, setImageLoading] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const clearFilesRef = useRef<() => void>(() => {})
 
   const form = useForm<FormValues>({
@@ -223,18 +341,21 @@ export function BlogFormDrawer({
       if (!organizationId) {
         throw new Error("Current user organization is missing.")
       }
-      const created = await blogsApi.createBlog({
-        title: data.title,
-        slug: data.slug,
-        excerpt: data.excerpt || null,
-        featured_image: data.featured_image || null,
-        seo_title: data.seo_title || null,
-        seo_description: data.seo_description || null,
-        content: data.content,
-        status: data.status,
-        published_at:
-          data.status === "published" ? new Date().toISOString() : null,
-      }, organizationId)
+      const created = await blogsApi.createBlog(
+        {
+          title: data.title,
+          slug: data.slug,
+          excerpt: data.excerpt || null,
+          featured_image: data.featured_image || null,
+          seo_title: data.seo_title || null,
+          seo_description: data.seo_description || null,
+          content: data.content,
+          status: data.status,
+          published_at:
+            data.status === "published" ? new Date().toISOString() : null,
+        },
+        organizationId
+      )
       await syncTags(created.id, tagText, allTags, organizationId)
       return created
     },
@@ -266,7 +387,7 @@ export function BlogFormDrawer({
         status: data.status,
         published_at:
           data.status === "published"
-            ? editBlog?.published_at ?? new Date().toISOString()
+            ? (editBlog?.published_at ?? new Date().toISOString())
             : null,
       })
       await syncTags(id, tagText, allTags, organizationId)
@@ -288,7 +409,8 @@ export function BlogFormDrawer({
   const statusValue = form.watch("status")
   const statusHint = useMemo(() => {
     if (statusValue === "published") return "Will be visible on the website."
-    if (statusValue === "archived") return "Hidden from website and kept for history."
+    if (statusValue === "archived")
+      return "Hidden from website and kept for history."
     return "Saved as draft and hidden from website."
   }, [statusValue])
 
@@ -301,15 +423,45 @@ export function BlogFormDrawer({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) setIsFullScreen(false); onOpenChange(o); }}>
       <SheetContent
         side="right"
         showCloseButton={false}
-        className="flex w-full flex-col sm:max-w-xl"
+        className={cn(
+          "flex w-full flex-col transition-[width,max-width] duration-200",
+          isFullScreen
+            ? "fixed inset-0 h-full w-full max-w-full sm:max-w-full"
+            : "sm:max-w-2xl"
+        )}
       >
         <SheetHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
-          <SheetTitle>{isEditing ? "Edit Blog Post" : "Add Blog Post"}</SheetTitle>
+          <SheetTitle>
+            {isEditing ? "Edit Blog Post" : "Add Blog Post"}
+          </SheetTitle>
           <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={isFullScreen ? "Exit full screen" : "Full screen"}
+              onClick={() => setIsFullScreen((p) => !p)}
+            >
+              {isFullScreen ? (
+                <Minimize2 className="size-4" />
+              ) : (
+                <Maximize2 className="size-4" />
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewOpen(true)}
+            >
+              <Eye className="size-4" />
+              Preview
+            </Button>
             <Button
               className="min-w-18"
               size="lg"
@@ -372,7 +524,9 @@ export function BlogFormDrawer({
                         placeholder="improve-loan-approval-rates"
                         {...field}
                         onChange={(event) =>
-                          field.onChange(blogsApi.normalizeSlug(event.target.value))
+                          field.onChange(
+                            blogsApi.normalizeSlug(event.target.value)
+                          )
                         }
                       />
                     </FormControl>
@@ -390,7 +544,9 @@ export function BlogFormDrawer({
                     <FormControl>
                       <Select
                         value={field.value}
-                        onValueChange={(value) => field.onChange(value as BlogStatus)}
+                        onValueChange={(value) =>
+                          field.onChange(value as BlogStatus)
+                        }
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select status" />
@@ -404,42 +560,13 @@ export function BlogFormDrawer({
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">{statusHint}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {statusHint}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="excerpt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Excerpt</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={3}
-                        placeholder="Short summary shown in blog listing..."
-                        className="resize-y"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormItem>
-                <FormLabel>Tags (comma separated)</FormLabel>
-                <FormControl>
-                  <Input
-                    value={tagText}
-                    onChange={(event) => setTagText(event.target.value)}
-                    placeholder="loans, finance, growth"
-                  />
-                </FormControl>
-              </FormItem>
 
               <FormField
                 control={form.control}
@@ -455,23 +582,27 @@ export function BlogFormDrawer({
                         className={cn(
                           "rounded-md border transition-all duration-200",
                           isDragging
-                            ? "border-primary bg-primary/5 border-dashed"
+                            ? "border-dashed border-primary bg-primary/5"
                             : hasImage
                               ? "border-border bg-background hover:border-primary/50"
-                              : "border-muted-foreground/25 border-dashed bg-muted/30 hover:border-primary hover:bg-primary/5"
+                              : "border-dashed border-muted-foreground/25 bg-muted/30 hover:border-primary hover:bg-primary/5"
                         )}
                         onDragEnter={handleDragEnter}
                         onDragLeave={handleDragLeave}
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
                       >
-                        <input {...getInputProps()} className="sr-only" aria-hidden />
+                        <input
+                          {...getInputProps()}
+                          className="sr-only"
+                          aria-hidden
+                        />
 
                         {hasImage ? (
                           <div className="relative aspect-[16/10] w-full">
                             {imageLoading && (
                               <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-muted">
-                                <span className="text-muted-foreground text-sm">
+                                <span className="text-sm text-muted-foreground">
                                   Loading…
                                 </span>
                               </div>
@@ -526,13 +657,13 @@ export function BlogFormDrawer({
                             onClick={openFileDialog}
                           >
                             <div className="rounded-full bg-primary/10 p-3">
-                              <CloudUploadIcon className="text-primary size-6" />
+                              <CloudUploadIcon className="size-6 text-primary" />
                             </div>
                             <div className="space-y-1">
                               <p className="text-sm font-medium">
                                 Upload image or drag and drop
                               </p>
-                              <p className="text-muted-foreground text-xs">
+                              <p className="text-xs text-muted-foreground">
                                 PNG, JPG, WebP up to 5MB
                               </p>
                             </div>
@@ -544,7 +675,7 @@ export function BlogFormDrawer({
                         )}
                       </div>
 
-                      <p className="text-muted-foreground text-xs">
+                      <p className="text-xs text-muted-foreground">
                         Or paste image URL
                       </p>
                       <FormControl>
@@ -584,6 +715,64 @@ export function BlogFormDrawer({
 
               <FormField
                 control={form.control}
+                name="excerpt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Excerpt</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        placeholder="Short summary shown in blog listing..."
+                        className="resize-y"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormItem>
+                <FormLabel>Tags (comma separated)</FormLabel>
+                <FormControl>
+                  <Input
+                    value={tagText}
+                    onChange={(event) => setTagText(event.target.value)}
+                    placeholder="loans, finance, growth"
+                  />
+                </FormControl>
+              </FormItem>
+
+              <FormField
+                control={form.control}
+                name="content"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Content (Markdown)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={14}
+                        placeholder={
+                          "# Heading\n\nWrite markdown content here..."
+                        }
+                        className="resize-y font-mono text-xs"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="border-t pt-4">
+                <p className="mb-3 text-sm font-medium text-muted-foreground">
+                  SEO & metadata
+                </p>
+              </div>
+
+              <FormField
+                control={form.control}
                 name="seo_title"
                 render={({ field }) => (
                   <FormItem>
@@ -619,30 +808,32 @@ export function BlogFormDrawer({
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Content (Markdown)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={14}
-                        placeholder={"# Heading\n\nWrite markdown content here..."}
-                        className="resize-y font-mono text-xs"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
           </form>
         </Form>
       </SheetContent>
     </Sheet>
+
+    <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+      <DialogContent
+        className="max-h-[90vh] max-w-2xl overflow-hidden flex flex-col"
+        showCloseButton={true}
+      >
+        <DialogHeader>
+          <DialogTitle>Preview</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto rounded-md border bg-muted/30 p-6">
+          <BlogPreviewContent
+            title={form.watch("title")}
+            featuredImage={form.watch("featured_image")}
+            excerpt={form.watch("excerpt")}
+            content={form.watch("content")}
+            tags={tagText}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  </>
   )
 }
 
